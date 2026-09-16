@@ -80,12 +80,15 @@ if __name__ == "__main__":
     my_motor_left.set_effort(25)
     pyb.delay(2000)
 
+    #turn off the motor
     my_motor_left.set_effort(0)
     pyb.delay(1000)
 
+    #reverse the motor
     print('Reversing left motor')
     my_motor_left.set_effort(-25)
     pyb.delay(2000)
 
+    #turn off the motor
     my_motor_left.disable()
     print('Finished')
