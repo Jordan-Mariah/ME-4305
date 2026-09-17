@@ -95,7 +95,7 @@ def main():
             sample_for(1000)
             count_range = timer.period() + 1
 
-            for effort, initial_count in ((40, count_range - 6), (-40, 5)):
+            for effort, initial_count in ((-40, count_range - 501), (40, 500)):
                 # Seed the stopped counter near overflow, then underflow.
                 timer.counter(initial_count)
                 encoder.zero()
@@ -115,6 +115,7 @@ def main():
                         encoder.get_position(),
                         encoder.get_velocity(),
                     )
+                    #print(current)
                     if not crossing_rows:
                         if abs(current[0] - previous[0]) > count_range / 2:
                             crossing_rows = [previous, current]
