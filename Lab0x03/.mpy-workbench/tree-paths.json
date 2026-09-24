@@ -1,0 +1,128 @@
+[
+  {
+    "fullPath": "/README.txt",
+    "name": "README.txt",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/System Volume Information",
+    "name": "System Volume Information",
+    "isDir": true,
+    "depth": 0
+  },
+  {
+    "fullPath": "/System Volume Information/IndexerVolumeGuid",
+    "name": "IndexerVolumeGuid",
+    "isDir": true,
+    "depth": 1
+  },
+  {
+    "fullPath": "/System Volume Information/WPSettings.dat",
+    "name": "WPSettings.dat",
+    "isDir": false,
+    "depth": 1
+  },
+  {
+    "fullPath": "/boot.py",
+    "name": "boot.py",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/data",
+    "name": "data",
+    "isDir": true,
+    "depth": 0
+  },
+  {
+    "fullPath": "/driver.py",
+    "name": "driver.py",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/encoder.py",
+    "name": "encoder.py",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/main.py",
+    "name": "main.py",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/pybcdc.inf",
+    "name": "pybcdc.inf",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_10pct.csv",
+    "name": "step_10pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_20pct.csv",
+    "name": "step_20pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_30pct.csv",
+    "name": "step_30pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_40pct.csv",
+    "name": "step_40pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_50pct.csv",
+    "name": "step_50pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_60pct.csv",
+    "name": "step_60pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_70pct.csv",
+    "name": "step_70pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_80pct.csv",
+    "name": "step_80pct.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/step_data.csv",
+    "name": "step_data.csv",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/taskmotor.py",
+    "name": "taskmotor.py",
+    "isDir": false,
+    "depth": 0
+  },
+  {
+    "fullPath": "/test_taskmotor.py",
+    "name": "test_taskmotor.py",
+    "isDir": false,
+    "depth": 0
+  }
+]
