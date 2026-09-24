@@ -15,7 +15,7 @@ if __name__ == '__main__':
     left_test_flag: bool = False
 
     # Create task objects
-    task_motor_right = TaskMotor(right_test_flag)
+    task_motor_right = TaskMotor(right_test_flag, right_motor, right_encoder)
     task_motor_left = TaskMotor(left_test_flag)
 
     # Add task generators to cotask.task_list with priority
