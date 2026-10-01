@@ -1,58 +1,62 @@
-'''User interface task
-'''
+"""User interaction with a blocking input loop for standalone testing."""
 from pyb import USB_VCP
+#steps
+#prompt user for input
+#go into FSM depending on user string response
 
 class TaskUser:
 
-    # State id constants
-    S0_INIT = 0
-    S1_QUERY_USER = 1
-    S2_TEST_RIGHT = 2
-    S3_TEST_LEFT = 3
-    S4_EXIT = 4
+    #initialize at the begining of the task
+    def __init__(self, left_motor, right_motor):
 
-    # Other constants
-    HELP_SCREEN ='''
-+------------------------------------------------------------------------------+
-| ME 4305 Romi Tuning Interface Help Menu                                      |
-+-----+------------------------------------------------------------------------+
-| h/H | Print help menu                                                        |
-| l/L | Trigger step response sequence on left motor and print results         |
-| r/R | Trigger step response sequence on right motor and print results        |
-| e/E | Exit program                                                           |
-+-----+------------------------------------------------------------------------+'''
+        self.left_motor = left_motor
+        self.right_motor = right_motor
+        self.exit_initiated = False
 
-
-    def __init__(self, right_flag: bool, left_flag: bool) -> None:
-        '''Pass right and left motor flags in that order.'''
-        self.right_flag = right_flag
-        self.left_flag = left_flag
-
-        # Create serial interface
-        self.ser = USB_VCP()
-
-        self.state = self.S1_QUERY_USER
+    def print_help(self):
+        print("Welcome to the user interface! Print one of the following commands to get started.")
+        print("+------------------------------------------------------------------------------+")
+        print("| ME 4305 Romi Tuning Interface Help Menu                                      |")
+        print("+-----+------------------------------------------------------------------------+")
+        print("| h/H | Print help menu                                                        |")
+        print("| l/L | Trigger step response sequence on left motor and print results         |")
+        print("| r/R | Trigger step response sequence on right motor and print results        |")
+        print("| e/E | Exit program                                                           |")
+        print("+-----+------------------------------------------------------------------------+")
 
 
-    def run(self):
+    def user_interaction(self):
+        serial = USB_VCP()
+        self.print_help()
+
         while True:
-            if self.state == self.S0_INIT: #Zombie
-                pass
+            #are there current chars in serial input
+            if serial.any():
+                received = serial.recv(1, timeout=0) #reads up to a byte and doesnt wait if nothing there
 
-            elif self.state == self.S1_QUERY_USER:
-                self.ser.write(self.HELP_SCREEN)
+                if received:
+                    # Convert the byte recieved to a lowercase character.
+                    self.state = chr(received[0]).lower()
 
-            elif self.state == self.S2_TEST_RIGHT:
-                pass
+                    if self.state == "h":
+                        self.print_help()
 
-            elif self.state == self.S3_TEST_LEFT:
-                pass
+                    elif self.state == "l":
+                        if self.left_motor.start():
+                            print("Starting left motor sequence")
+                        else:
+                            print("Left motor is already running")
 
-            elif self.state == self.S4_EXIT:
-                pass
+                    elif self.state == "r":
+                        if self.right_motor.start():
+                            print("Starting right motor sequence")
+                        else:
+                            print("Right motor is already running")
 
-            yield
+                    elif self.state == "e":
+                        self.left_motor.stop()
+                        self.right_motor.stop()
+                        self.exit_initiated = True
 
-
-if __name__ == "__main__":
-    
+            # Outside both if blocks: yield even when no input arrives.
+            yield 0

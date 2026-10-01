@@ -1,6 +1,6 @@
 """Nonblocking, single-motor experiment task; all trial logic lives here."""
 from array import array
-from time import ticks_us, ticks_diff
+from time import ticks_us, ticks_diff, ticks_add
 from pyb import Pin, Timer
 from driver import Motor
 from encoder import Encoder
@@ -8,122 +8,157 @@ from encoder import Encoder
 
 class TaskMotor:
 
-    #class attributes listed in uppercase to represent them as constants
-    S0_IDLE = 0
-    S1_PREPARE = 1
-    S2_SETTLE = 2
-    S3_STEP_SAMPLE = 3
-    S4_STOP_MOTOR = 4
-    S5_EXPORT_DATA = 5 
+    # This integer state keeps the task asleep until start() is called.
+    S_IDLE = -1
 
-    #define a method with a parameter called self
-    #the body will not run until python calls this methods
-    def __init__(self, test_flag, motor: Motor):
+    #class attributes listed in uppercase to represent them as constants
+    S0_PREPARE = 0
+    S1_SETTLE = 1
+    S2_STEP_SAMPLE = 2
+    S3_STOP_MOTOR = 3
+    S4_EXPORT_DATA = 4 
+
+    '''1) determining whethere the motor driver side is left or right 
+    2) Storing that side as a string on an object 
+    3) Inititializing the timers for the motor 
+    4) Initializing the channel for that motor's timer 
+    5) Initializing the PWM, DIR and nSLP by calling the Motor class for that specific left or right motor'''
+    def __init__(self, side):
+        # The side parameter receives the string argument "left" or "right".
+        if side not in ("left", "right"):
+            raise ValueError("side must be left or right")
+        self.side = side # Store the string wheel name as a new motor task object.
+
         #Configure the hardware, create drivers, and store the starting state
         # Configure the PWM timers once.
+        #initialize the selected PWM timer as an object from the py built in Timer class 
+        self.pwm_timer = Timer(4 if side == "left" else 1, freq=20_000)
 
-        #initialize the right PWM timer as an object from the py built in Timer class 
-       self.motor = motor
+        '''this calls the timer object's channel method to configure channel 1.
+        The method returns a timer channel object that I store in pwm_right'''
+        pwm = self.pwm_timer.channel(
+            1, #channel 1
+            mode=Timer.PWM, #gen PWM
+            pin=Pin.cpu.B6 if side == "left" else Pin.cpu.A8,
+            pulse_width_percent=0 #initially have 0% duty cycle
+        )
 
-        #Initialize the right encoder's timer  as an object in the Task1 class from the py Timer class
-        self.encoder_timer_right = Timer(3, prescaler=0, period=65535)
+        #call the motor class from motor.py and pass in it's initializations
+        self.motor = Motor(
+            pwm,
+            Pin.cpu.B5 if side == "left" else Pin.cpu.A9,
+            Pin.cpu.A10 if side == "left" else Pin.cpu.B4
+        )
 
-        '''Initialize the right encoder as an object 
-        Store a reference to this object in the right_encoder attribute where an attribute is a named value'''
-        self.right_encoder = Encoder(
-            self.encoder_timer_right,
-            Pin.cpu.A6,
-            Pin.cpu.A7,
+        #Initialize the selected encoder's timer  as an object in the TaskMotor class from the py Timer class
+        self.encoder_timer = Timer(2 if side == "left" else 3, prescaler=0, period=65535)
+
+        '''Initialize the selected encoder as an object 
+        Store a reference to this object in the encoder attribute where an attribute is a named value'''
+        self.encoder = Encoder(
+            self.encoder_timer,
+            Pin.cpu.A0 if side == "left" else Pin.cpu.A6,
+            Pin.cpu.A1 if side == "left" else Pin.cpu.A7,
         )
 
         #specify that the self object holds the varriable
-        self.state = self.S1_PREPARE
+        self.state = self.S_IDLE
         self.effort = [10, 20, 30, 40, 50, 60, 70, 80]
         self.trial_run = 0
-        self.test_flag = test_flag
+        self.done = True
+
+    # Calling this method prepares another sweep using the existing drivers.
+    def start(self):
+        # Reject another request while this task is already running.
+        if not self.done:
+            return False
+        # Reset the integer trial index and discard the previous sample timer.
+        self.trial_run = 0
+        if hasattr(self, "sample_start"):
+            del self.sample_start
+        # Mark the task active and let its next scheduled turn prepare the motor.
+        self.done = False
+        self.state = self.S0_PREPARE
+        return True
         
     #tasks should be non-blocking meaning there should not be while loops or log delays in run
+    #run is now a generator funciton because it includes yield
     def run(self):
+        # Keep the generator alive so the scheduler can run future requests.
         while True:
-
-            # Check for test_flag. Otherwise do fuckall
-            if self.state == self.S0_IDLE:
-                if self.test_flag:
-                    self.state = self.S1_PREPARE
-                yield
-
+            # Yield without driving the motor until start() changes the state.
+            if self.state == self.S_IDLE:
+                yield self.state
+                continue
             #inidcates the starting state of the FSM
-            elif (self.state == self.S1_PREPARE):
+            if (self.state == self.S0_PREPARE):
                 #access the encoder object stored in right_encoder and call its zero method to reset the position
-                self.right_encoder.zero()
+                self.encoder.zero()
 
                 #store current clock reading then S1 can later know how mcuh time has elapsed
                 self.settle_start = ticks_us()
 
                 #initialize current state to next step in FSM
                 print("state0")
-                self.state = self.S2_SETTLE        
-                yield
+                self.state = self.S1_SETTLE         
 
             #settle the motor
-            elif (self.state == self.S2_SETTLE): 
-                self.right_motor.disable()
-                self.right_encoder.update() #refresh encoders measurments but dont repetedly zero
+            elif (self.state == self.S1_SETTLE): 
+                self.motor.disable()
+                self.encoder.update() #refresh encoders measurments but dont repetedly zero
                 #elapsed settling time: the difference between the current time and the start of the settling time
                 self.elapsed_settling = (ticks_diff(ticks_us(), self.settle_start))
                 #give 1 second for the wheel to die before the next trial starts
                 if self.elapsed_settling >= 1_000_000:
-                    self.state = self.S3_STEP_SAMPLE
-                yield
+                    self.state = self.S2_STEP_SAMPLE
 
-            elif (self.state == self.S3_STEP_SAMPLE):
+            elif (self.state == self.S2_STEP_SAMPLE):
 
                 #if self does not have a sample start attribute then initialize the 
                 #...sample start, interval, duration, next, time, and possition
-                if not hasattr(self, "sample_start"):
-                    #enable motor and set duty cycle
-                    self.right_motor.enable()
-                    self.right_motor.set_effort(self.effort[self.trial_run])
+                    if not hasattr(self, "sample_start"):
+                        #enable motor and set duty cycle
+                        self.motor.enable()
+                        self.motor.set_effort(self.effort[self.trial_run])
 
 
-                    self.sample_start = ticks_us()
-                    self.sample_interval = 10_000 #10 ms sampling interval
-                    self.sample_duration = 2_000_000 #2 seconds
-                    self.sample_next = self.sample_start #first sample imidiately scheduled
-                    self.sample_time = array("L") #specify with type code that sample_time stores a time value unsigned long int
-                    self.sample_positions = array("i") #specify with type code that sample_position stores signed encoder 
-                    #...position as a signed int
+                        self.sample_start = ticks_us()
+                        self.sample_interval = 10_000 #10 ms sampling interval
+                        self.sample_duration = 2_000_000 #2 seconds
+                        self.sample_next = self.sample_start #first sample imidiately scheduled
+                        self.sample_time = array("L") #specify with type code that sample_time stores a time value unsigned long int
+                        self.sample_positions = array("i") #specify with type code that sample_position stores signed encoder 
+                        #...position as a signed int
 
-                #update encoder for each itteration of run
-                self.right_encoder.update()
+                    #update encoder for each itteration of run
+                    self.encoder.update()
 
-                current_time = ticks_us()
-                time_elapse = ticks_diff(current_time, self.sample_start)
+                    current_time = ticks_us()
+                    time_elapse = ticks_diff(current_time, self.sample_start)
 
-                #if current time is greater than or equal to the next sample time
-                if ticks_diff(current_time, self.sample_next) >= 0:
-                    self.sample_time.append(time_elapse) #when the sample occurs
-                    self.sample_positions.append(self.right_encoder.get_position()) #encoder position when sampled
-                    self.sample_next += self.sample_interval #schedule the next sample #scedule next sample as current +
-                    #sample interval
+                    #if current time is greater than or equal to the next sample time
+                    if ticks_diff(current_time, self.sample_next) >= 0:
+                        self.sample_time.append(time_elapse) #when the sample occurs
+                        self.sample_positions.append(self.encoder.get_position()) #encoder position when sampled
+                        self.sample_next = ticks_add(current_time, self.sample_interval) # Handle clock wraparound.
+                        #sample interval
 
-                if time_elapse >= self.sample_duration:
-                    self.state = self.S4_STOP_MOTOR          
-                yield
+                    if time_elapse >= self.sample_duration:
+                        self.state = self.S3_STOP_MOTOR
 
-            elif (self.state == self.S4_STOP_MOTOR):
-                self.right_motor.set_effort(0)
-                self.right_motor.disable()
+            elif (self.state == self.S3_STOP_MOTOR):
+                self.motor.set_effort(0)
+                self.motor.disable()
 
-                self.state = self.S5_EXPORT_DATA
+                self.state = self.S4_EXPORT_DATA
                 print("state3")
-                yield
 
             #note that copilot was used to find the formatting needed for the hasattr structure along with the file.write line
             #This external support was helpful in better organizing the data into a csv instead of manually collecting it
-            elif self.state == self.S5_EXPORT_DATA:
+            elif self.state == self.S4_EXPORT_DATA:
                 effort = self.effort[self.trial_run]
-                filename = "step_{}pct.csv".format(effort)
+                # Include the wheel name so left and right data stay separate.
+                filename = "step_{}_{}pct.csv".format(self.side, effort)
                 with open(filename, "w") as file:
                     file.write("time_us,position\n")
 
@@ -139,17 +174,22 @@ class TaskMotor:
                 if self.trial_run < len(self.effort):
                     # S2 will recreate timing and sample buffers for the next trial.
                     del self.sample_start
-                    self.state = self.S1_PREPARE
+                    self.state = self.S0_PREPARE
                 else:
                     self.stop()
-                    self.test_flag = False
+                    self.done = True
                     print("All trials complete")
-                    self.state = self.S0_IDLE
-                yield
+            else:
+                raise ValueError("Invalid state")
+
+            #stop here and wait until main calls next()
+            yield self.state
 
     def stop(self):
         """Leave the selected motor disabled, including after interruption."""
-        self.right_motor.set_effort(0)
-        self.right_motor.disable()
-
+        self.motor.set_effort(0)
+        self.motor.disable()
+        # Return to idle after normal completion or an interrupted experiment.
+        self.state = self.S_IDLE
+        self.done = True
 

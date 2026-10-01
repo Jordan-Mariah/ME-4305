@@ -21,8 +21,8 @@ class Encoder:
 
     #defined a method called update. We will use this in the main loop for updating the encoder's position and velocity
     def update(self):
-        '''Runs one update step on the encoder's timer counter to keep
-           track of the change in count and check for counter reload'''
+        '''Takes the current count on the timer, calcs movement since last update,
+        adds that movement to the position, calculates the velocity'''
         #-----measure the time elapsed------
 
         #read current clock value in us
@@ -34,16 +34,15 @@ class Encoder:
 
         #measure the change in the encoder count
 
-        # read the encoder's timers current count and stroes it in current_count
-        current_count = self.tim.counter()
-        #num of counts since last reading.
-        self.delta = current_count - self.prev_count
-        #save this reading as the previous count to be used in the next update
-        self.prev_count = current_count
-        # Update before the encoder moves half the timer's count range.
+        #read the encoder's timers current count and stroes it in current_count
+        current_count = self.tim.counter() #num of counts since last reading.
+        self.delta = current_count - self.prev_count #save this reading as the previous count to be used in the next update
+        self.prev_count = current_count # Update before the encoder moves half the timer's count range.
         count_range = self.tim.period() + 1
+        '''correct backwards wrap around'''
         if self.delta < -count_range / 2:
             self.delta += count_range
+        #correct forward wrap around
         elif self.delta > count_range / 2:
             self.delta -= count_range
         self.position += self.delta
