@@ -1,3 +1,10 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:system"
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python.analysis.ignoredPackages": [
+        "cotask"
+    ],
+    "python.analysis.exclude": [
+        "cotask"
+    ],
+    "python.analysis.typeCheckingMode": "standard"
 }

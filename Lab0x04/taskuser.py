@@ -16,6 +16,8 @@ class TaskUser:
     #Other constants
 
     VALID_DIGITS: set = set(map(str, range(10)))
+    TERMINATORS: set = {"\r", "\n"}
+
 
     #Task variables
 
@@ -27,6 +29,7 @@ class TaskUser:
 
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
+        self.next_effort = next_effort
         self.serial = serial
         self.exit_initiated = False
 
@@ -81,7 +84,7 @@ class TaskUser:
 
                 elif low_char == "d":
                     print("Enter new target effort%:\n")
-                    self.out_buff.clear()
+                    self.out_buff = []
                     self.state = self.S2_AWAIT_DIGIT_INPUT
 
                 elif low_char == "e":
@@ -105,15 +108,33 @@ class TaskUser:
                 #Digit input logic tree:
 
                 if self.new_char in self.VALID_DIGITS:
+                    self.serial.write(self.new_char)
                     self.out_buff.append(self.new_char)
 
                 elif self.new_char == "." and not self.new_char in self.out_buff:
+                    self.serial.write(self.new_char)
                     self.out_buff.append(self.new_char)
 
                 elif self.new_char == "-" and len(self.out_buff) == 0:
+                    self.serial.write(self.new_char)
                     self.out_buff.append(self.new_char)
 
-                elif self.new_char ==
+                elif self.new_char in self.TERMINATORS:
+
+                    if len(self.out_buff) == 0:
+                        self.serial.write(f"\r\nInvalid input (empty). Effort unchanged: {self.next_effort.value}")
+
+                    elif self.out_buff == ["-"]:
+                        self.serial.write(f"\r\nInvalid input (only '-'). Effort unchanged: {self.next_effort.value}")
+
+                    elif self.out_buff[-1] == ["."]:
+                        self.serial.write(f"\r\nInvalid input (nothing after '.'). Effort unchanged: {self.next_effort.value}")
+
+                    else:
+                        self.next_effort.set(float("".join(self.out_buff)))
+                        self.serial.write(f"\r\nNew effort set: {self.next_effort.value}")
+
+                    self.state = self.S0_AWAIT_COMMAND
 
                 self.new_char = ""
                 self.state = self.S2_AWAIT_DIGIT_INPUT
