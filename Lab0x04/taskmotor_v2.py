@@ -4,7 +4,6 @@ from time import ticks_us, ticks_diff, ticks_add
 from pyb import Pin, Timer
 from driver import Motor
 from encoder import Encoder
-from tshare import Share
 
 
 class TaskMotor:
@@ -24,57 +23,79 @@ class TaskMotor:
     3) Inititializing the timers for the motor 
     4) Initializing the channel for that motor's timer 
     5) Initializing the PWM, DIR and nSLP by calling the Motor class for that specific left or right motor'''
-    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, name: str):
-        #Pull args
-        self.motor = motor
-        self.encoder = encoder
-        self.test_flag = test_flag
-        self.side = name
+    def __init__(self, side):
+        # The side parameter receives the string argument "left" or "right".
+        if side not in ("left", "right"):
+            raise ValueError("side must be left or right")
+        self.side = side # Store the string wheel name as a new motor task object.
+
+        #Configure the hardware, create drivers, and store the starting state
+        # Configure the PWM timers once.
+        #initialize the selected PWM timer as an object from the py built in Timer class 
+        self.pwm_timer = Timer(4 if side == "left" else 1, freq=20_000)
+
+        '''this calls the timer object's channel method to configure channel 1.
+        The method returns a timer channel object that I store in pwm_right'''
+        pwm = self.pwm_timer.channel(
+            1, #channel 1
+            mode=Timer.PWM, #gen PWM
+            pin=Pin.cpu.B6 if side == "left" else Pin.cpu.A8,
+            pulse_width_percent=0 #initially have 0% duty cycle
+        )
+
+        #call the motor class from motor.py and pass in it's initializations
+        self.motor = Motor(
+            pwm,
+            Pin.cpu.B5 if side == "left" else Pin.cpu.A9,
+            Pin.cpu.A10 if side == "left" else Pin.cpu.B4
+        )
+
+        #Initialize the selected encoder's timer  as an object in the TaskMotor class from the py Timer class
+        self.encoder_timer = Timer(2 if side == "left" else 3, prescaler=0, period=65535)
+
+        '''Initialize the selected encoder as an object 
+        Store a reference to this object in the encoder attribute where an attribute is a named value'''
+        self.encoder = Encoder(
+            self.encoder_timer,
+            Pin.cpu.A0 if side == "left" else Pin.cpu.A6,
+            Pin.cpu.A1 if side == "left" else Pin.cpu.A7,
+        )
 
         #specify that the self object holds the varriable
         self.state = self.S_IDLE
-        self.effort = [10, 20, 30, 40, 50, 60, 70, 80]
+        self.effort = [0.0]
         self.trial_run = 0
         self.done = True
-        self.test_flag.set(False)
 
-    # Calling this method prepares another sweep using the existing drivers.
-    # def start(self):
-    #     # Reject another request while this task is already running.
-    #     if not self.done:
-    #         return False
-    #     # Reset the integer trial index and discard the previous sample timer.
-    #     self.trial_run = 0
-    #     if hasattr(self, "sample_start"):
-    #         del self.sample_start
-    #     # Mark the task active and let its next scheduled turn prepare the motor.
-    #     self.done = False
-    #     self.state = self.S0_PREPARE
-    #     return True
+    # Calling this method prepares one selected-duty test using the existing drivers.
+    def start(self, duty_cycle):
+        # Reject another request while this task is already running.
+        if not self.done:
+            return False
+        if not -100.0 <= duty_cycle <= 100.0:
+            raise ValueError("Duty cycle must be between -100 and +100")
+        self.effort = [float(duty_cycle)]
+        # Reset the integer trial index and discard the previous sample timer.
+        self.trial_run = 0
+        if hasattr(self, "sample_start"):
+            del self.sample_start
+        # Mark the task active and let its next scheduled turn prepare the motor.
+        self.done = False
+        #** Enter state 0 when the UI requests a test with l or r.
+        self.state = self.S0_PREPARE
+        return True
         
     #tasks should be non-blocking meaning there should not be while loops or log delays in run
     #run is now a generator funciton because it includes yield
     def run(self):
         # Keep the generator alive so the scheduler can run future requests.
         while True:
-
             # Yield without driving the motor until start() changes the state.
             if self.state == self.S_IDLE:
-                if self.test_flag.value == True:
-                    # Reset the integer trial index and discard the previous sample timer.
-                    self.trial_run = 0
-                    if hasattr(self, "sample_start"):
-                        del self.sample_start
-
-                    # Mark the task active and let its next scheduled turn prepare the motor.
-                    self.done = False
-                    self.state = self.S0_PREPARE
                 yield self.state
-
+                continue
             #inidcates the starting state of the FSM
-            elif (self.state == self.S0_PREPARE):
-
-
+            if (self.state == self.S0_PREPARE):
                 #access the encoder object stored in right_encoder and call its zero method to reset the position
                 self.encoder.zero()
 
@@ -82,7 +103,7 @@ class TaskMotor:
                 self.settle_start = ticks_us()
 
                 #initialize current state to next step in FSM
-                print("state0")
+                print("Preparing {} motor; settling for 1 second before the 2-second test.".format(self.side))
                 self.state = self.S1_SETTLE         
 
             #settle the motor
@@ -123,10 +144,12 @@ class TaskMotor:
                     if ticks_diff(current_time, self.sample_next) >= 0:
                         self.sample_time.append(time_elapse) #when the sample occurs
                         self.sample_positions.append(self.encoder.get_position()) #encoder position when sampled
-                        self.sample_next = ticks_add(current_time, self.sample_interval) # Handle clock wraparound.
+                        #** Advance from the scheduled deadline so small delays do not skip every other sample.
+                        self.sample_next = ticks_add(self.sample_next, self.sample_interval) # Handle clock wraparound.
                         #sample interval
 
                     if time_elapse >= self.sample_duration:
+                        #** Enter state 3 after the two-second sampling period.
                         self.state = self.S3_STOP_MOTOR
 
             elif (self.state == self.S3_STOP_MOTOR):
@@ -134,35 +157,28 @@ class TaskMotor:
                 self.motor.disable()
 
                 self.state = self.S4_EXPORT_DATA
-                print("state3")
+                print("Motor stopped; exporting elapsed time [us] and encoder position [counts].")
 
             #note that copilot was used to find the formatting needed for the hasattr structure along with the file.write line
             #This external support was helpful in better organizing the data into a csv instead of manually collecting it
             elif self.state == self.S4_EXPORT_DATA:
-                effort = self.effort[self.trial_run]
-                # Include the wheel name so left and right data stay separate.
-                filename = "step_{}_{}pct.csv".format(self.side, effort)
-                with open(filename, "w") as file:
-                    file.write("time_us,position\n")
-
-                    for time, position in zip(
-                        self.sample_time,
-                        self.sample_positions
-                    ):
-                        file.write("{},{}\n".format(time, position))
-
-                print("Saved:", filename)
-                self.trial_run += 1
-
-                if self.trial_run < len(self.effort):
-                    # S2 will recreate timing and sample buffers for the next trial.
-                    del self.sample_start
-                    self.state = self.S0_PREPARE
+                # Export one short line per scheduled turn instead of a whole file.
+                if not hasattr(self, "export_index"):
+                    self.export_index = -2
+                if self.export_index == -2:
+                    print("Begin data: motor={},duty_cycle_pct={}".format(
+                        self.side, self.effort[self.trial_run]))
+                elif self.export_index == -1:
+                    print("time_us,position_counts")
+                elif self.export_index < len(self.sample_time):
+                    print("{},{}".format(self.sample_time[self.export_index],
+                                        self.sample_positions[self.export_index]))
                 else:
+                    print("End of data")
+                    del self.export_index
                     self.stop()
-                    self.done = True
-                    self.test_flag.set(False)
-                    print("All trials complete")
+                if hasattr(self, "export_index"):
+                    self.export_index += 1
             else:
                 raise ValueError("Invalid state")
 
@@ -173,8 +189,9 @@ class TaskMotor:
         """Leave the selected motor disabled, including after interruption."""
         self.motor.set_effort(0)
         self.motor.disable()
+        if hasattr(self, "export_index"):
+            del self.export_index
         # Return to idle after normal completion or an interrupted experiment.
         self.state = self.S_IDLE
         self.done = True
-        self.test_flag.set(False)
 
