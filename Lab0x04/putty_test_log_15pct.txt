@@ -1,0 +1,232 @@
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+
+- accept a signed duty-cycle value containing one optional decimal point;
+
+-15
+
+- convert a completed valid entry to a standard numeric scalar; and
+
+Value set to -15.0
+Selected duty: -15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at -15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=-15.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: -15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Right test requested at -15.0%; wait for End of data, or e to stop.
+Preparing right motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=right,duty_cycle_pct=-15.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: -15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+15.5
+Value set to 15.5
+Selected duty: 15.5%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.5%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=15.5
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: 15.5%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+-15.5
+Value set to -15.5
+Selected duty: -15.5%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Right test requested at -15.5%; wait for End of data, or e to stop.
+Preparing right motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=right,duty_cycle_pct=-15.5
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: -15.5%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+50
+Value set to 50.0
+Selected duty: 50.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 50.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=50.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: 50.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=15.0
+time_us,position_counts
+[Data rows omitted]
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+
+- remain cooperative while the user is deciding what to type.
+
+Continue duty entry and press Enter, or e to exit.
+
+
+- avoid changing the duty cycle when the entry is empty or incomplete;
+No value entered; duty unchanged. Enter a number or e to exit.
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+15.0
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+
+No value entered; duty unchanged. Enter a number or e to exit.
+No value entered; duty unchanged. Enter a number or e to exit.
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=15.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+
+No value entered; duty unchanged. Enter a number or e to exit.
+-
+Incomplete entry; add digits or use rubout to correct.
+
+Incomplete entry; add digits or use rubout to correct.
+100
+Value set to -100.0
+Selected duty: -100.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+
+No value entered; duty unchanged. Enter a number or e to exit.
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor test busy
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=15.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+11115
+
+- reject a value outside the allowable range supported by your motor driver rather than applying it to the motor;
+
+Duty cycle out of range. Use -100 to +100.
+Enter a replacement duty cycle and press Enter, or e to exit.
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=15.0
+time_us,position_counts
+[Data rows omitted]
+End of data
+Test complete; both motors disabled.
+Continue duty entry and press Enter, or e to exit.
+15
+Duty cycle out of range. Use -100 to +100.
+Enter a replacement duty cycle and press Enter, or e to exit.
+15
+Value set to 15.0
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 15.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+ME 4305 Romi Open-Loop Test Interface
++-----+-----------------------------------------------+
+| h/H | Print help menu |
+| d/D | Enter duty cycle for next test |
+| l/L | Run left motor open-loop test |
+| r/R | Run right motor open-loop test |
+| e/E | Exit program |
++-----+-----------------------------------------------+
+Selected duty: 15.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Motor test busy
+Exiting; both motors disabled.
+┌───────────┬───┬───────┬──────┬───────────────────────┬───────────────────────┐
+│ │ │ │ │ DURATION (ms) │ LATENCY (ms) │
+│ TASK NAME │PRI│PERIOD │ RUNS ├───────┬───────┬───────┼───────┬───────┬───────┤
+│ │ │ (ms)  │ │  AVG  │  MAX  │ STDEV │  AVG  │  MAX  │ STDEV │
+├───────────┼───┼───────┼──────┼───────┼───────┼───────┼───────┼───────┼───────┤
+│Left Task  │  1│ 10.0│ 42810│  0.181│  7.019│  0.414│  0.184│ 41.835│  0.543│
+│Right Task │  1│ 10.0│ 42810│  0.113│  7.020│  0.274│  0.245│ 41.519│  0.610│
+│User Input │  1│  100.0│  4280│  0.226│ 48.000│  1.508│  0.225│  3.847│  0.273│
+└───────────┴───┴───────┴──────┴───────┴───────┴───────┴───────┴───────┴───────┘
+
+Traceback (most recent call last):
+  File "main.py", line 69, in <module>
+  File "main.py", line 55, in main
+  File "cotask.py", line 1, in schedule
+StopIteration:
+MicroPython ff2ed49367-dirty on 2026-07-09; NUCLEO-L476RG with STM32L476RG
+Type "help()" for more information.
+
+- accumulate accepted characters in a list;
+[Verified in taskuser.py; internal storage is not visible in this log.]
+
+- support correction with the rubout character sent by PuTTY;
+[Rubout correction is not identifiable in the supplied log.]

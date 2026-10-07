@@ -1,0 +1,35 @@
+Waiting for: 'Enter duty cycle [%]:'
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+Waiting for: 'Value set to 25.0'
+25.0
+Value set to 25.0
+Waiting for: 'Begin data: motor=left,duty_cycle_pct=25.0'
+Selected duty: 25.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Left test requested at 25.0%; wait for End of data, or e to stop.
+Preparing left motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=left,duty_cycle_pct=25.0
+Waiting for: 'time_us,position_counts'
+time_us,position_counts
+Saved 201 rows and plot for left to C:\Users\jorda\Documents\Romi Robot\Project Design\Lab0x04\results\2026-10-06_13-40-20_812560
+Waiting for: 'Enter duty cycle [%]:'
+Test complete; both motors disabled.
+Selected duty: 25.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Type a duty from -100 to +100; decimals allowed. Rubout corrects; Enter accepts; e exits.
+Enter duty cycle [%]:
+Waiting for: 'Value set to -25.0'
+-25.0
+Value set to -25.0
+Waiting for: 'Begin data: motor=right,duty_cycle_pct=-25.0'
+Selected duty: -25.0%.
+Choose motor: l = left, r = right; d = change duty; h = help; e = exit.
+Right test requested at -25.0%; wait for End of data, or e to stop.
+Preparing right motor; settling for 1 second before the 2-second test.
+Motor stopped; exporting elapsed time [us] and encoder position [counts].
+Begin data: motor=right,duty_cycle_pct=-25.0
+Waiting for: 'time_us,position_counts'
+time_us,position_counts
+Saved 201 rows and plot for right to C:\Users\jorda\Documents\Romi Robot\Project Design\Lab0x04\results\2026-10-06_13-40-20_812560
