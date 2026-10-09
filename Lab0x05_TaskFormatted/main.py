@@ -69,7 +69,7 @@ def main():
     right_test_flag = Share(False, bool)
     left_data = Share([], list[tuple[int, int]])
     right_data = Share([], list[tuple[int, int]])
-    next_effort = Share(10, int)
+    next_effort = Share(10, float)
 
     #Create tasks
     left_motor = TaskMotor(

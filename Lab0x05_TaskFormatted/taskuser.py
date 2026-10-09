@@ -19,11 +19,6 @@ class TaskUser:
     VALID_DIGITS: set = set(map(str, range(10)))
     TERMINATORS: set = {"\r", "\n"}
 
-
-    #Task variables
-
-
-
     #initialize at the begining of the task
     def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, serial: USB_VCP):
         # Argument handling
@@ -58,7 +53,7 @@ class TaskUser:
         self.print_help()
 
         while True:
-
+            # This is really "Await command and print out datapoints" TODO handle serial csv writing elsewhere
             if self.state == self.S0_AWAIT_COMMAND: 
                 if self.serial.any(): #Keep checking for new inputs in buffer
                     buff: bytes = self.serial.read(1) # type: ignore
@@ -82,8 +77,6 @@ class TaskUser:
                         self.serial.write(b"time_us,position_counts\r\n")
 
                 # Process left and right test outputs 
-                # TODO impliment arbatrary serial output from any task. Currently handles left and right tests explicitly
-
                 if self.current_test == "left":
                     data = cast(list[tuple[int, int]], self.left_data.value) # cast() is just for typing in vscode
                     if data: # data is a list that taskmotor continuously adds time, position points to
@@ -92,7 +85,7 @@ class TaskUser:
 
                     # If left test is over push end string through serial
                     elif self.left_test_flag.value == False: 
-                        self.serial.write("End of data\r\n")
+                        self.serial.write(b"End of data\r\n")
                         self.current_test = ""
 
                 if self.current_test == "right":
@@ -126,7 +119,7 @@ class TaskUser:
 
                 elif low_char == "r":
                     # Make sure there is no residual data in right data buffer before starting new test
-                    data = cast(list[tuple[int, int]], self.left_data.value)
+                    data = cast(list[tuple[int, int]], self.right_data.value)
 
                     if self.right_test_flag.value == False and not data:
                         self.right_test_flag.set(True)
@@ -157,15 +150,15 @@ class TaskUser:
                 #Digit input logic tree:
 
                 if self.new_char in self.VALID_DIGITS:
-                    self.serial.write(self.new_char)
+                    self.serial.write(self.new_char.encode())
                     self.out_buff.append(self.new_char)
 
                 elif self.new_char == "." and not self.new_char in self.out_buff:
-                    self.serial.write(self.new_char)
+                    self.serial.write(self.new_char.encode())
                     self.out_buff.append(self.new_char)
 
                 elif self.new_char == "-" and len(self.out_buff) == 0:
-                    self.serial.write(self.new_char)
+                    self.serial.write(self.new_char.encode())
                     self.out_buff.append(self.new_char)
 
                 elif self.new_char == "\x7f" and not self.out_buff == []:
@@ -175,17 +168,17 @@ class TaskUser:
                 elif self.new_char in self.TERMINATORS:
 
                     if len(self.out_buff) == 0:
-                        self.serial.write(f"\r\nInvalid input (empty). Effort unchanged: {self.next_effort.value}".encode())
+                        self.serial.write(f"\r\nInvalid input (empty). Effort unchanged: {self.next_effort.value}\r\n".encode())
 
                     elif self.out_buff in (["-"], ["."]):
-                        self.serial.write(f"\r\nInvalid input (only '-'). Effort unchanged: {self.next_effort.value}".encode())
+                        self.serial.write(f"\r\nInvalid input (only '-'). Effort unchanged: {self.next_effort.value}\r\n".encode())
 
                     elif self.out_buff[-1] == ".":
-                        self.serial.write(f"\r\nInvalid input (nothing after '.'). Effort unchanged: {self.next_effort.value}".encode())
+                        self.serial.write(f"\r\nInvalid input (nothing after '.'). Effort unchanged: {self.next_effort.value}\r\n".encode())
 
                     else:
                         self.next_effort.set(float("".join(self.out_buff)))
-                        self.serial.write(f"\r\nValue set to {self.next_effort.value}")
+                        self.serial.write(f"\r\nValue set to {self.next_effort.value}".encode())
 
                     # Enter detected: go back to await
                     self.state = self.S0_AWAIT_COMMAND
