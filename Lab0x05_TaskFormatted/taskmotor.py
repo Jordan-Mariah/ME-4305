@@ -1,22 +1,28 @@
 """Nonblocking, single-motor experiment task; all trial logic lives here."""
-from array import array
 from time import ticks_us, ticks_diff, ticks_add
-from pyb import Pin, Timer
 from driver import Motor
 from encoder import Encoder
 from tshare import Share
+from PIDcontroler import PID
 from typing import cast
 
 
 class TaskMotor:
 
-    #class attributes listed in uppercase to represent them as constants
+    #Task state constants
     S0_IDLE = 0
     S1_PREPARE = 1
     S2_SETTLE = 2
     S3_START_TEST = 3
     S4_TAKE_SAMPLES = 4
     S5_STOP_MOTOR = 5
+
+    # Other task constants
+    KP = 0
+    KI = 0
+    KD = 0
+    KPWM = 0
+
 
     '''1) determining whethere the motor driver side is left or right 
     2) Storing that side as a string on an object 
@@ -32,9 +38,18 @@ class TaskMotor:
         self.data_to_user = cast(list[tuple[int, int]], data.value)
         self.side = name
 
-        #specify that the self object holds the varriable
-        self.state = self.S0_IDLE
+        # Configure PID controller
+        self.pid = PID(
+            kp = self.KP,
+            ki = self.KI,
+            kd = self.KD,
+            output_gain = self.KPWM
+        )
+
+        # Set starting values
         self.test_flag.set(False)
+        self.state = self.S0_IDLE
+
 
     def run(self):
         # Keep the generator alive so the scheduler can run future requests.
@@ -69,9 +84,8 @@ class TaskMotor:
                     self.state = self.S3_START_TEST
 
             elif self.state == self.S3_START_TEST: 
-                # Activate motor and set effort
+                # Activate motor
                 self.motor.enable()
-                self.motor.set_effort(self.next_effort.value)
 
                 # Set first-cycle time values
                 self.sample_start = ticks_us()
@@ -85,6 +99,13 @@ class TaskMotor:
 
                 #update encoder for each itteration of run
                 self.encoder.update()
+
+                # Update motor for each itteration of run
+                current_velocity = self.encoder.get_velocity()
+                target_velocity = cast(float, self.next_effort.value)
+                pid_out = self.pid.next_output(target_velocity, current_velocity)
+
+                self.motor.set_effort(pid_out)
 
                 current_time = ticks_us()
                 time_elapse = ticks_diff(current_time, self.sample_start)
