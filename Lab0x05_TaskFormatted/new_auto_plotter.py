@@ -15,7 +15,7 @@ from pathlib import Path #added
 from time import monotonic
 
 # Serial-port settings. Change SERIAL_PORT to the computer's com port
-SERIAL_PORT = "COM5"
+SERIAL_PORT = "COM6"
 BAUDRATE = 115_200
 SERIAL_TIMEOUT = 0.25
 
@@ -260,6 +260,7 @@ def main():
                 #duty as float then back to text
                 duty = float(configured_duty) #convert duty to float
                 ser.write(b"d") #added-send without newline
+                print("sent: 'd'")
                 wait_for(reader, "Enter duty cycle [%]:") #added-wait for firmware
                 ser.write((str(duty) + NUMERIC_LINE_ENDING).encode("ascii")) #changed
                 wait_for(reader, f"Value set to {duty}") #added

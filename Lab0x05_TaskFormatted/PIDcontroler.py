@@ -49,6 +49,7 @@ class PID():
         else:
             self.kd = None
 
+        # Catch all other arguments
         for arg, val in kwargs.items():
             setattr(self, arg, val)
 
@@ -56,6 +57,9 @@ class PID():
         if (self.kp, self.ki, self.kd) == (None, None, None):
             raise ValueError(f"{self}: No input for kp, ki, or kd")
             #TODO: Prevent further use of this PID if error is caught and ignored.
+
+        # Set history values to -1 to indicate no run yet
+        self.error_last = -1
 
     
     def next_output(self, target: float, current: float) -> float:
@@ -67,8 +71,8 @@ class PID():
         self.error_now = target - current
 
         # Get dt (and check if first run)
-        if self.time_last in locals():
-            dt = ticks_diff(ticks_us() ,self.time_last)
+        if not self.error_last == -1:
+            dt = ticks_diff(ticks_us(), self.time_last)
         else:
             dt = 0
             self.error_last = self.error_now
@@ -94,15 +98,14 @@ class PID():
         output = sum(out)
 
         # Use output post-processors if specified
-        output *= self.output_gain if not self.output_gain == None else output
-        output += self.output_bias if not self.output_bias == None else output
-        
+        # output *= self.output_gain if not self.output_gain == None else output
+        # output += self.output_bias if not self.output_bias == None else output
+
         return output
 
 
     def reset(self):
-        self.error_last = 0
-        del(self.time_last)
+        self.error_last = -1
 
     def onTarget(self, threshold: float) -> bool:
         return abs(self.error_last) <= abs(threshold)

@@ -17,10 +17,10 @@ class TaskMotor:
     S5_STOP_MOTOR = 5
 
     # Other task constants
-    KP: float = 0
-    KI: float = 0
+    KP: float = 0.001
+    KI: float = 0.0001
     KD: float = 0
-    KPWM: float = 0
+    KPWM: float = 14.29
 
 
     '''1) determining whethere the motor driver side is left or right 
@@ -37,13 +37,12 @@ class TaskMotor:
         self.data_to_user: list[tuple[int, int]] = data.value # type: ignore
         self.side = name
 
-        # Configure PID controller
-        # self.pid = PID(
-        #     kp = self.KP,
-        #     ki = self.KI,
-        #     kd = self.KD,
-        #     output_gain = self.KPWM
-        # )
+        #Configure PID controller
+        self.pid = PID(
+            kp = self.KP,
+            # ki = self.KI,
+            # kd = self.KD,
+        )
 
         # Set starting values
         self.test_flag.set(False)
@@ -71,10 +70,9 @@ class TaskMotor:
 
             #settle the motor
             elif (self.state == self.S2_SETTLE): 
-                
                 self.encoder.update() #refresh encoders measurments but dont repetedly zero
                 #elapsed settling time: the difference between the current time and the start of the settling time
-                self.elapsed_settling = (ticks_diff(ticks_us(), self.settle_start))
+                self.elapsed_settling = ticks_diff(ticks_us(), self.settle_start)
                 #give 1 second for the wheel to die before the next trial starts
 
                 if self.elapsed_settling >= 1_000_000:
@@ -92,7 +90,6 @@ class TaskMotor:
                 self.sample_duration = 2_000_000 #2 seconds
                 self.sample_next = self.sample_start #first sample imidiately scheduled
 
-                self.motor.set_effort(self.next_effort.value)
 
                 self.state = self.S4_TAKE_SAMPLES
 
@@ -102,11 +99,16 @@ class TaskMotor:
                 self.encoder.update()
 
                 # Update motor for each itteration of run
-                # current_velocity = self.encoder.get_velocity()
-                # target_velocity = cast(float, self.next_effort.value)
-                # pid_out = self.pid.next_output(target_velocity, current_velocity)
+                current_velocity = self.encoder.get_velocity()
+                target_velocity: float = self.next_effort.value # type: ignore
+                pid_out = self.pid.next_output(target_velocity, current_velocity)
 
-                # self.motor.set_effort(pid_out)
+                # Process controler output (saturate voltage and apply Kpwm)
+                Vsat = 7 if pid_out > 7 else pid_out
+                Vsat = -7 if pid_out < -7 else pid_out
+                pwm_pct = Vsat * self.KPWM
+
+                self.motor.set_effort(pwm_pct)
 
                 current_time = ticks_us()
                 time_elapse = ticks_diff(current_time, self.sample_start)
