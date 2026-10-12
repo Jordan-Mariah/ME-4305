@@ -49,7 +49,7 @@ class PID():
         else:
             self.kd = None
 
-        for arg, val in kwargs.values():
+        for arg, val in kwargs.items():
             setattr(self, arg, val)
 
         # Make sure at least one parameter is set

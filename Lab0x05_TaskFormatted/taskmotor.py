@@ -4,7 +4,6 @@ from driver import Motor
 from encoder import Encoder
 from tshare import Share
 from PIDcontroler import PID
-from typing import cast
 
 
 class TaskMotor:
@@ -18,10 +17,10 @@ class TaskMotor:
     S5_STOP_MOTOR = 5
 
     # Other task constants
-    KP = 0
-    KI = 0
-    KD = 0
-    KPWM = 0
+    KP: float = 0
+    KI: float = 0
+    KD: float = 0
+    KPWM: float = 0
 
 
     '''1) determining whethere the motor driver side is left or right 
@@ -35,16 +34,16 @@ class TaskMotor:
         self.encoder = encoder
         self.test_flag = test_flag
         self.next_effort = next_effort
-        self.data_to_user = cast(list[tuple[int, int]], data.value)
+        self.data_to_user: list[tuple[int, int]] = data.value # type: ignore
         self.side = name
 
         # Configure PID controller
-        self.pid = PID(
-            kp = self.KP,
-            ki = self.KI,
-            kd = self.KD,
-            output_gain = self.KPWM
-        )
+        # self.pid = PID(
+        #     kp = self.KP,
+        #     ki = self.KI,
+        #     kd = self.KD,
+        #     output_gain = self.KPWM
+        # )
 
         # Set starting values
         self.test_flag.set(False)
@@ -93,6 +92,8 @@ class TaskMotor:
                 self.sample_duration = 2_000_000 #2 seconds
                 self.sample_next = self.sample_start #first sample imidiately scheduled
 
+                self.motor.set_effort(self.next_effort.value)
+
                 self.state = self.S4_TAKE_SAMPLES
 
             elif (self.state == self.S4_TAKE_SAMPLES): 
@@ -101,11 +102,11 @@ class TaskMotor:
                 self.encoder.update()
 
                 # Update motor for each itteration of run
-                current_velocity = self.encoder.get_velocity()
-                target_velocity = cast(float, self.next_effort.value)
-                pid_out = self.pid.next_output(target_velocity, current_velocity)
+                # current_velocity = self.encoder.get_velocity()
+                # target_velocity = cast(float, self.next_effort.value)
+                # pid_out = self.pid.next_output(target_velocity, current_velocity)
 
-                self.motor.set_effort(pid_out)
+                # self.motor.set_effort(pid_out)
 
                 current_time = ticks_us()
                 time_elapse = ticks_diff(current_time, self.sample_start)

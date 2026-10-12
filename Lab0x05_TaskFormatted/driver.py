@@ -1,5 +1,5 @@
 import pyb
-from pyb import Pin, Timer, pwm
+from pyb import Pin
 
 # the motor class groups the related motor driver pins and funcs into a single driver class. Two distinct wheel objects can be created from this
 class Motor:

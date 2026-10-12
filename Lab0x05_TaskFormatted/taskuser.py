@@ -1,7 +1,6 @@
 """User interaction with a blocking input loop for standalone testing."""
-from pyb import USB_VCP
+from pyb import USB_VCP # type: ignore
 from tshare import Share
-from typing import cast
 #steps
 #prompt user for input
 #go into FSM depending on user string response
@@ -62,14 +61,14 @@ class TaskUser:
 
                 # if there is no current test, check if there is data waiting and set current_test
                 if self.current_test == "":
-                    if self.left_test_flag.value or cast(list[tuple[int, int]], self.left_data.value):
+                    if self.left_test_flag.value or self.left_data.value:
                         self.current_test = "left"
                         self.serial.write(
                             f"Begin data: motor=left,duty_cycle_pct={self.next_effort.value}\r\n".encode()
                         )
                         self.serial.write(b"time_us,position_counts\r\n")
 
-                    elif self.right_test_flag.value or cast(list[tuple[int, int]], self.right_data.value):
+                    elif self.right_test_flag.value or self.right_data.value:
                         self.current_test = "right"
                         self.serial.write(
                             f"Begin data: motor=right,duty_cycle_pct={self.next_effort.value}\r\n".encode()
@@ -78,7 +77,7 @@ class TaskUser:
 
                 # Process left and right test outputs 
                 if self.current_test == "left":
-                    data = cast(list[tuple[int, int]], self.left_data.value) # cast() is just for typing in vscode
+                    data: list[tuple[int, int]] = self.left_data.value # type: ignore
                     if data: # data is a list that taskmotor continuously adds time, position points to
                         time, position = data.pop(0) # Get oldest data point
                         self.serial.write(f"{time},{position}\r\n".encode()) # Send it through serial
@@ -89,7 +88,7 @@ class TaskUser:
                         self.current_test = ""
 
                 if self.current_test == "right":
-                    data = cast(list[tuple[int, int]], self.right_data.value) # Just for typing in vscode
+                    data: list[tuple[int, int]] = self.right_data.value # type: ignore
                     if data:
                         time, position = data.pop(0)
                         self.serial.write(f"{time},{position}\r\n".encode())
@@ -109,7 +108,7 @@ class TaskUser:
 
                 elif low_char == "l":
                     # Make sure there is no residual data in left data buffer before starting new test
-                    data = cast(list[tuple[int, int]], self.left_data.value)
+                    data: list[tuple[int, int]] = self.left_data.value # type: ignore
 
                     if self.left_test_flag.value == False and not data:
                         self.left_test_flag.set(True)
@@ -119,7 +118,7 @@ class TaskUser:
 
                 elif low_char == "r":
                     # Make sure there is no residual data in right data buffer before starting new test
-                    data = cast(list[tuple[int, int]], self.right_data.value)
+                    data: list[tuple[int, int]] = self.right_data.value # type: ignore
 
                     if self.right_test_flag.value == False and not data:
                         self.right_test_flag.set(True)
@@ -178,7 +177,7 @@ class TaskUser:
 
                     else:
                         self.next_effort.set(float("".join(self.out_buff)))
-                        self.serial.write(f"\r\nValue set to {self.next_effort.value}".encode())
+                        self.serial.write(f"\r\nValue set to {self.next_effort.value}\r\n".encode())
 
                     # Enter detected: go back to await
                     self.state = self.S0_AWAIT_COMMAND
