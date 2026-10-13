@@ -27,7 +27,7 @@ SERIAL_TIMEOUT = 0.25
 NUMERIC_LINE_ENDING = "\r" #changed
 
 #Here we test duty cycle by reeplacing the starter's single START_COMMAND with two motor/duty pairs
-TESTS = (("left", 25.0), ("right", -25.0)) #added
+TESTS = (("left", 2000), ("right", -2000)) #added
 # Stop waiting and report an error instead of hanging forever if the firmware
 # does not respond or stops transmitting partway through a dataset.
 # monotonic() returns a steadily increasing time in seconds. Its starting value
@@ -243,7 +243,7 @@ def main():
     if [motor for motor, _ in TESTS] != ["left", "right"]: #added
         raise ValueError("Configure one left test followed by one right test") #added
     for _, duty in TESTS: #added-make sure the duty cycles are within range
-        if not math.isfinite(duty) or not -100 <= duty <= 100:
+        if not math.isfinite(duty) or not -100000 <= duty <= 100000:
             raise ValueError("Configured duty cycles must be within -100 to +100")
     # General results dirrectory   
     OUTPUT_DIRECTORY.mkdir(exist_ok=True) #changed
