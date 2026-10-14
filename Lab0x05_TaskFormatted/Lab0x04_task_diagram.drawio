@@ -1,0 +1,110 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="Lab-0x04-Task-Architecture" name="Lab 0x04 Task Architecture">
+    <mxGraphModel dx="3066" dy="1646" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="whiteSpace=wrap;html=0;fontSize=25;fontFamily=Arial;spacing=10;strokeWidth=2;text;strokeColor=none;fillColor=none;fontSize=24;fontStyle=1;" value="Task Diagram" vertex="1">
+          <mxGeometry height="50" width="1300" x="50" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="ui" parent="1" style="whiteSpace=wrap;html=0;fontSize=20;fontFamily=Arial;spacing=10;strokeWidth=2;rounded=0;fillColor=#ffffff;strokeColor=#333333;fontStyle=1" value="User task: TaskUser&#xa;Period: 0 ms | Priority: 0&#xa;Runs when higher priority tasks aren&#39;t&#xa;Handles  user commands and duty entry" vertex="1">
+          <mxGeometry height="170" width="450" x="820" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="left" parent="1" style="whiteSpace=wrap;html=0;fontSize=19;fontFamily=Arial;spacing=10;strokeWidth=2;rounded=0;fillColor=#ffffff;strokeColor=#333333;fontStyle=1" value="Left motor task: TaskMotor&#xa;Period: 50 ms | Priority: 1&#xa;Measures velocity, control voltage, and applied PWM&#xa;Left driver &amp; encoder belong to left motor task" vertex="1">
+          <mxGeometry height="210" width="370" x="40" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="right" parent="1" style="whiteSpace=wrap;html=0;fontSize=20;fontFamily=Arial;spacing=10;strokeWidth=2;rounded=0;fillColor=#ffffff;strokeColor=#333333;fontStyle=1" value="Right motor task: TaskMotor&#xa;Period: 50 ms | Priority: 1&#xa;Measures velocity, control voltage, and applied PWM&#xa;Right driver and encoder belong to this task" vertex="1">
+          <mxGeometry height="210" width="370" x="1760" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitX=0.35;exitY=1;entryX=0.35;entryY=0;" target="ui" value="Commands velocity setpoint, duty, and kp entry entry&#xa;Type: bytes">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="975" y="230" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge2" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitX=0.8;exitY=0;entryX=0.8;entryY=1;" value="Prompts and acknowledgements&#xa;Type: text">
+          <mxGeometry relative="1" x="0.1056" y="-80" as="geometry">
+            <mxPoint x="-10" y="40" as="offset" />
+            <mxPoint x="1200" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge3" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitY=0.25;entryY=0.25;" target="left" value="Setpoint (rad/s)&#xa;Kp (V/(rad/s))&#xa;Test request">
+          <mxGeometry relative="1" x="0.0256" y="-45" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="510" y="475" />
+              <mxPoint x="510" y="475" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge4" edge="1" parent="1" source="left" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitY=0.8;entryY=0.8;" target="ui" value="">
+          <mxGeometry relative="1" x="-0.0256" y="-40" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="700" y="530" />
+              <mxPoint x="700" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Lvbi8qfWlaBq1GAta5h7-2" connectable="0" parent="edge4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Response data shared buffer&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.0327" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge5" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitY=0.25;entryY=0.25;" target="right" value="Setpoint (rad/s)&#xa;Kp (V/(rad/s))&#xa;Test request">
+          <mxGeometry relative="1" x="0.087" y="-35" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1410" y="485" />
+              <mxPoint x="1410" y="485" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge6" edge="1" parent="1" source="right" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitY=0.8;entryY=0.8;" target="ui" value="Response data-shared buffer&#xa;">
+          <mxGeometry relative="1" x="-0.0612" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1530" y="420" />
+              <mxPoint x="1530" y="420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge7" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;entryX=0.48;entryY=0.116;entryDx=0;entryDy=0;" target="mAuNXaOsTv9E8uk1aYzV-3" value="exit_initiated&#xa;Type: bool">
+          <mxGeometry relative="1" x="-0.0698" as="geometry">
+            <Array as="points">
+              <mxPoint x="1046.46" y="630" />
+              <mxPoint x="1046.46" y="630" />
+            </Array>
+            <mxPoint x="1050" y="770" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge8" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;dashed=1;" target="left" value="Stop motor">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="860" />
+              <mxPoint x="220" y="650" />
+            </Array>
+            <mxPoint x="800" y="860" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge9" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;dashed=1;" target="right" value="Stop motor">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1940" y="860" />
+              <mxPoint x="1940" y="650" />
+            </Array>
+            <mxPoint x="1300" y="860" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mAuNXaOsTv9E8uk1aYzV-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" value="&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;PC: PuTTY or automation script&lt;/span&gt;&lt;br style=&quot;padding: 0px; margin: 0px; font-family: Arial; font-size: 19px;&quot;&gt;&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;COM5 / USB VCP&lt;/span&gt;&lt;br style=&quot;padding: 0px; margin: 0px; font-family: Arial; font-size: 19px;&quot;&gt;&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;One connection at a time&lt;/span&gt;" vertex="1">
+          <mxGeometry height="90" width="390" x="890" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="mAuNXaOsTv9E8uk1aYzV-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" value="&lt;font face=&quot;Arial&quot;&gt;&lt;span style=&quot;font-size: 19px;&quot;&gt;Context bubbles: not a part of the official task diagram&lt;/span&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="320" x="1510" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="mAuNXaOsTv9E8uk1aYzV-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" value="&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;Main program / scheduler: Not seperate task&lt;/span&gt;&lt;br style=&quot;padding: 0px; margin: 0px; font-family: Arial; font-size: 19px;&quot;&gt;&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;Schedules the tasks&lt;/span&gt;&lt;br style=&quot;padding: 0px; margin: 0px; font-family: Arial; font-size: 19px;&quot;&gt;&lt;span style=&quot;font-family: Arial; font-size: 19px;&quot;&gt;Stops both motors when ended&lt;/span&gt;" vertex="1">
+          <mxGeometry height="120" width="520" x="800" y="780" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

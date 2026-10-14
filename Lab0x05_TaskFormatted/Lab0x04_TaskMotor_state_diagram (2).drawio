@@ -1,0 +1,86 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="Lab-0x04-TaskMotor-State-Transitions" name="Lab 0x04 TaskMotor State Transitions">
+    <mxGraphModel dx="3260" dy="1751" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;text;strokeColor=none;fillColor=none;fontSize=24;fontStyle=1;" value="TaskMotor - Same behavior for both motors" vertex="1">
+          <mxGeometry height="50" width="1200" x="100" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="start" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;rounded=0;fillColor=#ffffff;strokeColor=#333333;" value="Initialize motor and encoder" vertex="1">
+          <mxGeometry height="80" width="480" x="440" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="idle" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S0: Idle&#xa;Motor disabled&#xa;Wait for a test request" vertex="1">
+          <mxGeometry height="100" width="440" x="460" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="s0" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S1: Read the Kp setpoint&#xa;Reset PID&#xa;Start the settling timer" vertex="1">
+          <mxGeometry height="100" width="440" x="460" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-3" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="A-xaSNmAfhQaZGvkBoNC-2">
+          <mxGeometry relative="1" x="-0.3148" as="geometry">
+            <mxPoint x="679.6825396825398" y="750" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-10" connectable="0" parent="A-xaSNmAfhQaZGvkBoNC-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" value="1 second" vertex="1">
+          <mxGeometry relative="1" x="-0.1304" y="3" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s1" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S2: Settle&#xa;Keep motor disabled&#xa;Update the encoder" vertex="1">
+          <mxGeometry height="100" width="440" x="460" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-11" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="idle">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300.00000000000045" y="150.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-12" connectable="0" parent="A-xaSNmAfhQaZGvkBoNC-11" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;2 seconds elapsed&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;stop motor/&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;clear flag&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.0022" y="-3" as="geometry">
+            <mxPoint x="-3" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S4: Control and sample&#xa;Measure valocity, calculate PID and PWM&#xa;Record time, velocity and voltage" vertex="1">
+          <mxGeometry height="90" width="547.5" x="400" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S5: Stop motor&#xa;Zero duty, disable motor, and clear test flag" vertex="1">
+          <mxGeometry height="100" width="440" x="460" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" edge="1" parent="1" source="start" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;" target="idle" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" edge="1" parent="1" source="idle" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;" target="s0" value="Valid test request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge3" edge="1" parent="1" source="s0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;" target="s1" value="Ready to settle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge5" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.85;entryY=0;" target="s1" value="Still settling">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="660" />
+              <mxPoint x="1060" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge6" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.85;entryY=0;innerLoopWaypoints=1;" target="s2" value="Sample every 50 ms">
+          <mxGeometry relative="1" x="-0.0005" as="geometry">
+            <Array as="points">
+              <mxPoint x="1090" y="975" />
+              <mxPoint x="1090" y="900" />
+              <mxPoint x="834.8" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge7" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;endFill=1;strokeWidth=2;fontSize=14;fontFamily=Arial;labelBackgroundColor=#ffffff;" target="s3" value="Buffer full">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-4" edge="1" parent="1" source="A-xaSNmAfhQaZGvkBoNC-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="A-xaSNmAfhQaZGvkBoNC-2" parent="1" style="whiteSpace=wrap;html=0;fontSize=16;fontFamily=Arial;spacing=10;strokeWidth=2;ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="S3: Start test&#xa;Enable motor&#xa;Zero the encoder&#xa;Reset PID&#xa;start timer then apply initial ouput" vertex="1">
+          <mxGeometry height="125" width="425" x="460" y="760" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
