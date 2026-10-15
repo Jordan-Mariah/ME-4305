@@ -5,7 +5,7 @@ from time import ticks_us, ticks_diff, ticks_add
 class PID():
     '''Generic object for configurable PID control'''
 
-    # Define parameter types
+    #parameter types defined here for clarity
 
     kp: float | None
     ki: float | None
@@ -54,9 +54,10 @@ class PID():
             setattr(self, arg, val)
 
         # Make sure at least one parameter is set
+        self._invalid = False
         if (self.kp, self.ki, self.kd) == (None, None, None):
+            self._invalid = True
             raise ValueError(f"{self}: No input for kp, ki, or kd")
-            #TODO: Prevent further use of this PID if error is caught and ignored.
 
         # Set history values to -1 to indicate no run yet
         self.error_last = -1
@@ -65,12 +66,15 @@ class PID():
     def next_output(self, target: float, current: float) -> float:
         '''Evaluate PID cycle. Input target as well as sensor value'''
 
-        out: list[float] = []
+        if self._invalid:
+            raise RuntimeError(f"{self}: PID initialization failed")
+
+        out: list[float] = []#initialization of out
         dt: float
         # Get error
         self.error_now = target - current
 
-        # Get dt (and check if first run)
+        # find the elapssed time, set dt to zero for the first call after initializing
         if not self.error_last == -1:
             dt = ticks_diff(ticks_us(), self.time_last)
         else:
@@ -79,27 +83,21 @@ class PID():
             self.error_sum = 0
         self.time_last = ticks_us()
 
-        # Evaluate PID gains
+        # when we have Kp enabled then get P=Kp(e)where P is proportional controll
         if not self.kp == None:
             outkp = self.error_now * self.kp
             out.append(outkp)
 
+        #calc. integral contribution (Save this for later if you add in integral control)
         if not self.ki == None:
             self.error_sum += ((self.error_now + self.error_last) * dt ) / 2 # Using trapazoidal sum to approximate integration
             outki = self.error_sum * self.ki
             out.append(outki)
 
-        if not self.kd == None and dt > 0:
-            outkd = self.kd * (self.error_now - self.error_last) / dt #TODO confirm whether to use error or input delta
-            out.append(outkd)
-
+        #add the accumulated error from the interval to the error sum
         self.error_last = self.error_now
 
         output = sum(out)
-
-        # Use output post-processors if specified
-        # output *= self.output_gain if not self.output_gain == None else output
-        # output += self.output_bias if not self.output_bias == None else output
 
         return output
 
@@ -116,17 +114,11 @@ class PID():
             raise TypeError(f"{self}: kp is not type 'float'")
         self.kp = kp
 
-
+    #may or may not use later if dont use then delete ttis func. 
     def set_ki(self, ki: float):
         if not isinstance(ki, float):
             raise TypeError(f"{self}: ki is not type 'float'")
         self.ki = ki
-
-
-    def set_kd(self, kd: float):
-        if not isinstance(kd, float):
-            raise TypeError(f"{self}: kd is not type 'float'")
-        self.kd = kd
 
 
     def set_output_gain(self, output_gain: float):
@@ -134,7 +126,8 @@ class PID():
             raise TypeError(f"{self}: output_gain is not type 'float'")
         self.output_gain = output_gain
 
-
+    #sets constant output that we can add to the PID output so that we can use 
+    # Vadjusted= gain_out(Vcontroller) + bias_out
     def set_output_bias(self, output_bias: float):
         if not isinstance(output_bias, float):
             raise TypeError(f"{self}: output_bias is not type 'float'")
