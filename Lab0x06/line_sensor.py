@@ -1,92 +1,195 @@
-from pyb import Pin, ADC, Timer
-from time import ticks_us, ticks_diff, ticks_add
+"""owns the inputs from the adc and provides read_averages(), set_calibration(calibration),
+read_weights(), read_centroid()"""
+
+"""13-channel analog line-sensor driver.
+
+Channel numbers, ADC pins, and positions must use the same order.
+Positions are in millimeters, positive toward Romi's left.
+
+Calibration and normal sensing use the same acquisition method.
+"""
+
 from array import array
-from ulab import numpy as np # type: ignore
-#import numpy as np # COMMENT THIS OUT BEFORE SENDING TO ROMI!!!!!!!
+from math import isfinite
+from pyb import ADC, Pin
 
-class LineSensor():
-    '''Driver object for the Pololu QTR-HD-13A Reflectance Sensor Array: 13-Channel, 4mm Pitch, Analog Output'''
+from line_calibration import validate_calibration
 
-    # SET CONSTANTS
-    OVERSAMPLES: int = 25 
-
-
-    def __init__(self, pins: tuple[Pin, ...], calib_black: tuple[int, ...] = (), calib_white: tuple[int, ...] = (), reader_timer: Timer | None = None) -> None:
-        '''13 ADC capable pins are nessisary. Calibration values are needed for full function'''
-         # Generic variable declarations
-        self.last_raw: list[int] = []
-        self.last_normal: list[float] = []
-        self.value_buffer = tuple([ array('H', ( 0 for _ in range(self.OVERSAMPLES) )) for _ in range(13) ])
-        self.value_average = array('f', (0 for _ in range(13)))
-        self.is_calib = False
-        self.has_timer = False
-
-        # Check pin count
-        if len(pins) == 13:
-            self.pins = tuple([ADC(pin) for pin in pins])
-        else:
-            raise ValueError("LineSensor must be passed exactly 13 pins")
-
-        # Handle optional inputs
-
-        # Set calibration values and raise internal calibration flag
-        if len(calib_black) == 13 and len(calib_white) == 13:
-            self.calib_black = calib_black
-            self.calib_white = calib_white
-            self.calibrate()
-            self.is_calib = True
-
-        # Set internal timer and raise internal timer flag
-        if isinstance(reader_timer, Timer):
-            self.timer = reader_timer
-            self.has_timer = True
+#aligned to the ROMI Pin configuration
+SENSOR_PINS = (
+    Pin.cpu.A0, Pin.cpu.A1, Pin.cpu.A4, Pin.cpu.A6, Pin.cpu.A7,
+    Pin.cpu.B0, Pin.cpu.B1, Pin.cpu.C0, Pin.cpu.C1, Pin.cpu.C2,
+    Pin.cpu.C3, Pin.cpu.C4, Pin.cpu.C5,
+)
+SENSOR_CHANNELS = tuple(range(1, 14))
+# Assumes channel 1 on right of ROMI but verify
+# reverse position signs for if channel 1 is on left of Romi
+SENSOR_POSITIONS_MM = tuple(range(-24, 25, 4))
+# check ST-LINK USART bridge routing before using PA2.
+# =scale battery voltage to ADC range with a suitable divider.
+BATTERY_SENSE_PIN = Pin.cpu.A2  # CN10-35; no ADC instantiated here
 
 
-    def read_raw(self, do_output = False) -> tuple | None:
-        '''Read raw unsigned 12 bit (0 - 2048) value from all pins. Set do_output to True to create a unique set of values'''
-        self.last_raw = [pin.read() for pin in self.pins]
+class LineSensor:
+    CHANNEL_COUNT = 13
 
-        # If set to output construct a new tuple. Otherwise save memory
-        if do_output:
-            return tuple(self.last_raw)
-        else:
-            return
-        
+    def __init__(
+        self,
+        pins,
+        channels,
+        positions_mm,
+        timer,
+        sample_count=10,
+        sample_rate_hz=5000,
+        min_span=10,
+    ):
+        """
+        pins:
+            13 ADC-capable pin objects in driver reading order.
+        channels:
+            Corresponding printed sensor numbers, 1 through 13.
+        positions_mm:
+            Corresponding lateral positions; positive toward Romi's left.
+        timer:
+            A free pyb.Timer supporting timed ADC acquisition.
+            This driver configures its frequency.
+        sample_count:
+            Number of samples averaged per channel.
+        sample_rate_hz:
+            Samples per second PER CHANNEL; at most 5000.
+        min_span:
+            Minimum acceptable black-minus-white ADC difference.
+        """
+        self.channels = tuple(channels)
+        self.positions_mm = tuple(float(p) for p in positions_mm)
+        pins = tuple(pins)
 
-    def read_flat(self, do_output = False) -> tuple | None:
-        '''Read all ADC values as floats from 0 to 1. Set do_output to True to create a unique set of values'''
-        self.read_raw()
-        self.last_normal = [float(val) / 2048 for val in self.last_raw]
+        if not (
+            len(pins)
+            == len(self.channels)
+            == len(self.positions_mm)
+            == self.CHANNEL_COUNT
+        ):
+            raise ValueError("Provide exactly 13 pins, channels, and positions")
 
-        # If set to output construct a new tuple. Otherwise save memory
-        if do_output:
-            return tuple(self.last_normal)
-        else:
-            return
+        if sorted(self.channels) != list(range(1, 14)):
+            raise ValueError("Channels must contain printed numbers 1 through 13")
 
+        if not all(isfinite(p) for p in self.positions_mm):
+            raise ValueError("Sensor positions must be finite")
 
-    def calibrate(self, calib_black: list = [], calib_white: list = []) -> None:
-        '''Re-do calibration or calibrate for first time if not done allready'''
+        if not isinstance(sample_count, int) or sample_count <= 0:
+            raise ValueError("Sample count must be a positive integer")
 
-        # Calibrate with internal values
-        if (calib_black, calib_white) == ([],[]) and not (self.calib_black, self.calib_white) == ([],[]):
-            #TODO impliment calibration
-            pass
-        elif not (calib_black, calib_white) == ([],[]):
-            #TODO impliment calibration
-            pass
-        else:
-            raise ValueError("Line Sensor calibration failed: No calibration values specified or none saved internally")
+        if not 0 < sample_rate_hz <= 5000:
+            raise ValueError("Sample rate must be greater than 0 and at most 5000 Hz")
 
+        if not 0 < min_span <= 4095:
+            raise ValueError("Invalid minimum calibration span")
 
-    def read_average(self) -> array[float]:
-        '''Reads values stored in buffer and finds current rolling average pin value.'''
-        if not self.has_timer:
-            raise TypeError("Line sensor read failed: no timer has been configured")
+        self.sample_count = sample_count
+        self.sample_rate_hz = sample_rate_hz
+        self.min_span = min_span
 
-        # Read values of ADC pins until value_buffer is full. Then take it's average.
-        if not ADC.read_timed_multi(self.pins, self.value_buffer, self.timer):
+        self.adcs = tuple(ADC(pin) for pin in pins)
+
+        # Allocate once; each acquisition overwrites these buffers.
+        self.buffers = tuple(
+            array("H", [0] * sample_count)
+            for _ in range(self.CHANNEL_COUNT)
+        )
+
+        # Reused floating-point output arrays.
+        self.averages = array("f", [0.0] * self.CHANNEL_COUNT)
+        self.weights = array("f", [0.0] * self.CHANNEL_COUNT)
+
+        self.timer = timer
+        self.timer.init(freq=sample_rate_hz)
+
+        self.white = None
+        self.black = None
+        self.spans = None
+        self.total_weight = 0.0
+
+    def read_averages(self):
+        """Average all channels.
+
+        Array is reused then rewritten
+        Copy it immediately if the readings must be retained.
+        """
+        if not ADC.read_timed_multi(
+            self.adcs, self.buffers, self.timer
+        ):
             raise RuntimeError("ADC acquisition overrun")
-        for i, buffer in enumerate(self.value_buffer):
-            self.value_average[i] = np.mean(buffer)
-        return self.value_average
+
+        #cal one average adc reading for each of the 13 sensors
+        for i, buffer in enumerate(self.buffers):
+            self.averages[i] = sum(buffer) / self.sample_count
+
+        return self.averages
+
+    def set_calibration(self, calibration):
+        """Validate and copy measured black/white ADC endpoints."""
+        validate_calibration(
+            calibration,
+            self.channels,
+            self.min_span,
+        )
+
+        # Use ordinary floating-point values for subtraction.
+        white = tuple(float(v) for v in calibration["white"])
+        black = tuple(float(v) for v in calibration["black"])
+        spans = tuple(
+            b - w for w, b in zip(white, black)
+        )
+
+        self.white = white
+        self.black = black
+        self.spans = spans
+
+    def read_weights(self):
+        """get readings and return blackness weights
+
+        White is a weight of about 0 and then black is approximately 1
+        The array returned is reused on each next call
+        """
+        if self.spans is None:
+            raise RuntimeError("Apply calibration before normalizing")
+
+        readings = self.read_averages()
+        total = 0.0
+
+        for i in range(self.CHANNEL_COUNT):
+            weight = (
+                (readings[i] - self.white[i]) / self.spans[i]
+            )
+
+            if weight < 0.0:
+                weight = 0.0
+            elif weight > 1.0:
+                weight = 1.0
+
+            self.weights[i] = weight
+            total += weight
+
+        self.total_weight = total
+        return self.weights
+
+    def read_centroid(self):
+        """Acquire and return line position in mm.
+
+        Negative: line on Romi's right.
+        Positive: line on Romi's left.
+        None: zero total weight, so position is undefined.
+        """
+        weights = self.read_weights()
+
+        if self.total_weight == 0.0:
+            return None
+
+        weighted_position = 0.0
+
+        for position, weight in zip(self.positions_mm, weights):
+            weighted_position += position * weight
+
+        return weighted_position / self.total_weight

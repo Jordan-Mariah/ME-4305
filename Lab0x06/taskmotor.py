@@ -1,4 +1,5 @@
-"""Nonblocking, single-motor experiment task; all trial logic lives here."""
+"""this is the nonblocking test for the motor. Here we set up the motor task 
+then it can be instantiated by the left and right motors"""
 from time import ticks_us, ticks_diff, ticks_add
 from driver import Motor
 from encoder import Encoder
@@ -26,8 +27,8 @@ class TaskMotor:
     '''1) determining whethere motor driver side is left or right 
     2) Store side as a string on object 
     3) Inititializing timers for motor 
-    4) Initializing channel for motor's timer 
-    5) Initializing the PWM, DIR and nSLP by calling the Motor class for left or right motor'''
+    4) Init motor's timer channels
+    5)calling the Motor class for left or right motor '''
     def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, name: str,
                  battery_voltage=None, counts_per_revolution=None,
                  driver_sign=None, encoder_sign=None, next_kp=None, period_ms=100):
@@ -36,15 +37,15 @@ class TaskMotor:
         self.encoder = encoder
         self.test_flag = test_flag
         self.next_effort = next_effort
-        self.next_kp = next_kp #* Selected gain supplied by main.py.
-        self.data_to_user = data.value #* Reference the dictionary allocated in main.py.
+        self.next_kp = next_kp #gain from main.py
+        self.data_to_user = data.value #from the the dictionary allocated in main.py.
         self.side = name
-        #* Configure from measured supply, encoder scale, and verified wheel signs.
+        #config based on voltage encoder scale, and wheel sign
         self.battery_voltage = battery_voltage
         self.counts_per_revolution = counts_per_revolution
         self.driver_sign = driver_sign
         self.encoder_sign = encoder_sign
-        #* Use the same period for scheduler execution and sample logging.
+        #same period for scheduler execution and sample log
         if period_ms <= 0:
             raise ValueError("Motor period must be positive")
         self.period_ms = period_ms
@@ -111,13 +112,13 @@ class TaskMotor:
             elif self.state == self.S3_START_TEST: 
                 # Activate motor
                 self.motor.enable()
-                #* Reset position and measurement time immediately before the step.
+                #Reset position and  time right before step
                 self.encoder.zero()
                 self.pid.reset()
 
                 # Set first-cycle time values
                 self.sample_start = ticks_us()
-                #* Apply the initial P command now, so sample_start marks the step.
+                #initial P command. then sample_start marks the step.
                 pid_out = self.pid.next_output(self.active_setpoint, 0.0)
                 if not isfinite(pid_out):
                     self.motor.disable()
@@ -134,7 +135,7 @@ class TaskMotor:
                 self.state = self.S4_TAKE_SAMPLES
 
             elif (self.state == self.S4_TAKE_SAMPLES):
-                #* Stop on the first scheduled turn at/after the deadline, before control.
+                #Stop on the first scheduled turn at/after the deadline
                 if ticks_diff(ticks_us(), self.sample_start) >= self.sample_duration:
                     self.motor.set_effort(0)
                     self.motor.disable()
@@ -150,12 +151,12 @@ class TaskMotor:
                 #Encoder reports counts/s
                 current_velocity = (self.encoder_sign * self.encoder.get_velocity()
                                     * 2 * pi / self.counts_per_revolution)
-                #* next_effort is now interpreted as a velocity setpoint in rad/s.
+                #next_effort -> velocity setpoint in rad/s.
                 target_velocity: float = self.active_setpoint
                 pid_out = self.pid.next_output(target_velocity, current_velocity)
 
                 # Process controler output (saturate voltage and apply Kpwm)
-                #* Reject invalid output, clamp both signs, then convert volts to duty.
+                # Reject invalid output clamp the signs, and convert volts to duty
                 if not isfinite(pid_out):
                     self.motor.disable()
                     raise ValueError("Controller requested a nonfinite voltage")

@@ -1,18 +1,25 @@
 
 """Schedule user interaction and both motor experiments."""
+import os
 from taskmotor import TaskMotor
 from taskuser import TaskUser
 from tshare import Share
 from array import array
 from driver import Motor
 from encoder import Encoder
-from line_sensor import LineSensor
+from line_calibration import load_calibration, save_calibration
 from pyb import Timer, Pin, USB_VCP
 import cotask # type: ignore
 #creates the driver and task objects, then repeatedly schedules their generators
 
+from line_sensor import(
+    LineSensor,
+    SENSOR_PINS,#all threeare defined in line_sensor.py
+    SENSOR_CHANNELS,
+    SENSOR_POSITIONS_MM,
+)
 
-#* Fill these values from measurements and sign checks before requesting a test.
+#config constants
 BATTERY_VOLTAGE = 8
 COUNTS_PER_WHEEL_REVOLUTION = 12 * 3952 / 33
 LEFT_DRIVER_SIGN = 1
@@ -38,6 +45,33 @@ def make_data():#buffer: memory that temporalily hold data
         "status": "completed", #failed to connect if over capacity.
     }, dict)
 
+def setup_calibration(sensor, force=False):
+    filename = "line_calibration.json"
+
+    if filename in os.listdir() and not force:
+        calibration = load_calibration(
+            filename, sensor.channels, sensor.min_span
+        )
+
+    else:
+        input("Place all 13 sensors above the black line->press Enter.")
+        black = list(sensor.read_averages())
+
+        input("Place all 13 sensors above the black line->press Enter.")
+        white = list(sensor.read_averages())
+
+        calibration = {
+            "channels": list(sensor.channels),
+            "black": black,
+            "white": white,
+        }
+
+        save_calibration(
+            filename, calibration, sensor.channels, sensor.min_span
+        )
+
+    sensor.set_calibration(calibration)
+    print("Calibration ready.")
 
 def main():
     #Create objects to be passed to tasks
@@ -75,8 +109,8 @@ def main():
     left_encoder_timer = Timer(2, prescaler=0, period=65535)
     left_encoder = Encoder(
         left_encoder_timer,
-        Pin.cpu.A0,
-        Pin.cpu.A1,
+        Pin.cpu.A15, # switched to PA15 (CN7)- frees PA0 for sensor 1
+        Pin.cpu.B3,  # switched to PB3 (CN10)- frees PA1 for sensor 2
     )   
 
     #Create right encoder
@@ -84,12 +118,31 @@ def main():
     right_encoder_timer = Timer(3, prescaler=0, period=65535)
     right_encoder = Encoder(
         right_encoder_timer,
-        Pin.cpu.A6,
-        Pin.cpu.A7,
+        Pin.cpu.C6, # CN10-4: -switched to PA6(CN10)- frees PA6 for sensor 4
+        Pin.cpu.C7, # CN10-19: -switched to PA7(CN10)- frees PA7 for sensor 5
     )   
 
-    #Create serial object
+    #instantiate timer specifically for ADC channels
+    sensor_timer = Timer(6)
 
+    #instantiate the line sensor object
+    line_sensor = LineSensor(
+        pins=SENSOR_PINS,
+        channels=SENSOR_CHANNELS,
+        positions_mm=SENSOR_POSITIONS_MM,
+        timer=sensor_timer,#use adc channel timer
+        sample_count=10,
+        sample_rate_hz=5000,
+        min_span=10,
+    )
+
+    
+    #call calibration funciton
+    left_mot.disable()
+    right_mot.disable()
+    setup_calibration(line_sensor, force=True)
+
+    #Create serial object
     serial = USB_VCP()
 
     #Create Shares for inter-task communication
@@ -114,7 +167,7 @@ def main():
         counts_per_revolution=COUNTS_PER_WHEEL_REVOLUTION,
         driver_sign=LEFT_DRIVER_SIGN,
         encoder_sign=LEFT_ENCODER_SIGN,
-        period_ms=MOTOR_PERIOD_MS, #* Match the motor task configuration to scheduling.
+        period_ms=MOTOR_PERIOD_MS, # set motor task to scheduling period.
     )
 
     right_motor = TaskMotor(
@@ -123,7 +176,7 @@ def main():
         test_flag=right_test_flag,      # Shared flag used to request/indicate a right-motor test
         next_effort=next_effort,        # Shared velocity setpoint (rad/s)
         next_kp=next_kp,                # Gain selected for next test-PID instance
-        data=right_data,                #* Shared response buffers-right motor
+        data=right_data,                # Shared response buffers-right motor
         name="right",                   # Human-readable identifier for this motor task
         battery_voltage=BATTERY_VOLTAGE,
         counts_per_revolution=COUNTS_PER_WHEEL_REVOLUTION,
