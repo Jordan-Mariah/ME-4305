@@ -160,6 +160,7 @@ class TaskMotor:
                 if not isfinite(pid_out):
                     self.motor.disable()
                     raise ValueError("Controller requested a nonfinite voltage")
+                pid_out += 1.5 * self.driver_sign # Voltage offset to compensate for... something...
                 Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
                 pwm_pct = self.driver_sign * 100 * Vsat / self.battery_voltage
 
@@ -185,7 +186,7 @@ class TaskMotor:
                 buffer["velocity"][i] = current_velocity
                 buffer["voltage"][i] = Vsat
                 buffer["count"] = i + 1 
-
+                
 
             elif (self.state == self.S5_STOP_MOTOR):
                 # Power off motors and lower test_flag

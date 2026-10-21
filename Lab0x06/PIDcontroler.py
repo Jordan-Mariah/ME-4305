@@ -83,7 +83,7 @@ class PID():
             self.error_sum = 0
         self.time_last = ticks_us()
 
-        # when we have Kp enabled then get P=Kp(e)where P is proportional controll
+        # when we have Kp enabled then get P=Kp(e)where P is proportional control
         if not self.kp == None:
             outkp = self.error_now * self.kp
             out.append(outkp)
@@ -97,6 +97,7 @@ class PID():
         #add the accumulated error from the interval to the error sum
         self.error_last = self.error_now
 
+        print(self.onTarget(0.1))
         output = sum(out)
 
         return output

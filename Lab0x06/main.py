@@ -137,10 +137,10 @@ def main():
     )
 
     
-    #call calibration funciton
-    left_mot.disable()
-    right_mot.disable()
-    setup_calibration(line_sensor, force=True)
+    #call calibration funciton (temporarily dissabled for motor testing)
+    # left_mot.disable()
+    # right_mot.disable()
+    # setup_calibration(line_sensor, force=True)
 
     #Create serial object
     serial = USB_VCP()

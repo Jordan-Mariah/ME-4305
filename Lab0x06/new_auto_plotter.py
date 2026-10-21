@@ -11,7 +11,7 @@ from pathlib import Path #added
 from time import monotonic
 
 # Serial-port settings. Change SERIAL_PORT to the computer's com port
-SERIAL_PORT = "COM5"
+SERIAL_PORT = "COM6"
 BAUDRATE = 115_200
 SERIAL_TIMEOUT = 0.25
 
@@ -25,7 +25,7 @@ NUMERIC_LINE_ENDING = "\r" #changed
 #Here we test duty cycle by reeplacing the starter's single START_COMMAND with two motor/duty pairs
 #For tests we now have three different proportional gain trials 
 #tune these
-TESTS = (("left", 5.0, 0.4),)
+TESTS = (("left", 5.0, 0.7),("right", 5.0, 0.7))
 # Stop waiting and report an error instead of hanging forever if the firmware
 # does not respond or stops transmitting partway through a dataset.
 # monotonic() returns a steadily increasing time in seconds. Its starting value
