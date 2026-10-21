@@ -17,6 +17,7 @@ class TaskMotor:
     S3_START_TEST = 3
     S4_TAKE_SAMPLES = 4
     S5_STOP_MOTOR = 5
+    S6_FOLLOW_LINE = 6
 
     # Other task constants
     KP: float = 0.001
@@ -29,7 +30,7 @@ class TaskMotor:
     3) Inititializing timers for motor 
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
-    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, name: str,
+    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, name: str,
                  battery_voltage=None, counts_per_revolution=None,
                  driver_sign=None, encoder_sign=None, next_kp=None, period_ms=100):
         #Pull args
@@ -39,6 +40,7 @@ class TaskMotor:
         self.next_effort = next_effort
         self.next_kp = next_kp #gain from main.py
         self.data_to_user = data.value #from the the dictionary allocated in main.py.
+        self.sensor_data = sensor_data # Dictionary of different sensor outputs
         self.side = name
         #config based on voltage encoder scale, and wheel sign
         self.battery_voltage = battery_voltage
@@ -195,5 +197,9 @@ class TaskMotor:
 
                 self.test_flag.value = False
                 self.state = self.S0_IDLE
+
+            elif self.state == self.S6_FOLLOW_LINE:
+                line_position: float = self.sensor_data.value["line"]
+                
 
             yield self.state

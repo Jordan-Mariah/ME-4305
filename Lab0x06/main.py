@@ -3,6 +3,7 @@
 import os
 from taskmotor import TaskMotor
 from taskuser import TaskUser
+from tasksensor import TaskSensor
 from tshare import Share
 from array import array
 from driver import Motor
@@ -31,6 +32,7 @@ INITIAL_KP = 0.1
 # Keep timing in firmware configuration
 MOTOR_PERIOD_MS = 50
 UI_PERIOD_MS = 0
+SENSOR_PERIOD_MS = 50
 
 
 def make_data():#buffer: memory that temporalily hold data
@@ -137,10 +139,10 @@ def main():
     )
 
     
-    #call calibration funciton (temporarily dissabled for motor testing)
-    # left_mot.disable()
-    # right_mot.disable()
-    # setup_calibration(line_sensor, force=True)
+    #call calibration funciton
+    left_mot.disable()
+    right_mot.disable()
+    setup_calibration(line_sensor)
 
     #Create serial object
     serial = USB_VCP()
@@ -153,6 +155,8 @@ def main():
     right_data = make_data()
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
+    sensor_flag = Share(False, bool) # Flag to start or stop collecting data
+    sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
 
     #Create tasks
     left_motor = TaskMotor(
@@ -162,6 +166,7 @@ def main():
         next_effort=next_effort,        #Shared velocity setpoint (rad/s)
         next_kp=next_kp,                #Gain selected for next test
         data=left_data,                 #left motor shared response motors
+        sensor_data=sensor_data,
         name="left",                    # Human-readable identifier for this motor task
         battery_voltage=BATTERY_VOLTAGE,
         counts_per_revolution=COUNTS_PER_WHEEL_REVOLUTION,
@@ -177,6 +182,7 @@ def main():
         next_effort=next_effort,        # Shared velocity setpoint (rad/s)
         next_kp=next_kp,                # Gain selected for next test-PID instance
         data=right_data,                # Shared response buffers-right motor
+        sensor_data=sensor_data,
         name="right",                   # Human-readable identifier for this motor task
         battery_voltage=BATTERY_VOLTAGE,
         counts_per_revolution=COUNTS_PER_WHEEL_REVOLUTION,
@@ -197,6 +203,12 @@ def main():
         motor_period_ms=MOTOR_PERIOD_MS,
         ui_period_ms=UI_PERIOD_MS,
         battery_voltage=BATTERY_VOLTAGE,
+    )
+
+    task_sensor = TaskSensor(
+        line_sensor=line_sensor,
+        sensor_flag=sensor_flag,
+        sensor_data=sensor_data
     )
 
     '''while this is set up like a priority scheduler the priority of each is 1 so it behaves like a round robin scheduler'''
@@ -232,6 +244,17 @@ def main():
             period = UI_PERIOD_MS #Period of Zero keeps current idle-task behavior
         )
     )
+
+    #create sensor task generator object and add it to the scheduler
+    cotask.task_list.append(
+        cotask.Task(
+            task_sensor.run(),
+            name = "Sensor Reader",
+            priority = 0,
+            profile = True,
+            period = SENSOR_PERIOD_MS #Period of Zero keeps current idle-task behavior
+        )
+    )    
 
     #Advance the generators until the user requests exit.
     try:

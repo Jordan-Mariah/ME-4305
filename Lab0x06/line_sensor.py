@@ -29,6 +29,7 @@ SENSOR_POSITIONS_MM = tuple(range(-24, 25, 4))
 # =scale battery voltage to ADC range with a suitable divider.
 BATTERY_SENSE_PIN = Pin.cpu.A2  # CN10-35; no ADC instantiated here
 
+CALIBRATION_PATH = "line_sensor.json"
 
 class LineSensor:
     CHANNEL_COUNT = 13
