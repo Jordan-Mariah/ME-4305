@@ -88,6 +88,9 @@ class TaskMotor:
                     active_kp = float(self.next_kp.value) if self.next_kp is not None else self.KP
                     self.pid.set_kp(active_kp)
 
+                    self.sample_start = ticks_us()
+                    record_data = True
+
                     self.state = self.S6_FOLLOW_LINE
 
             #inidcates the starting state of the FSM
@@ -233,6 +236,26 @@ class TaskMotor:
                 pid_out = self.pid.next_output(target_velocity, current_velocity) 
                 Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
                 self.motor.set_effort(self.driver_sign * 100 * Vsat / self.battery_voltage)
+
+                # TODO Sacrilege
+                if self.side == "left" and record_data:
+                    current_time = ticks_us()
+                    time_elapse = ticks_diff(current_time, self.sample_start)
+    
+                    #save test data into arrays - got help from copiolot because still wrapping my head around
+                    #using buffer arrays to store data and then have the user read from arrays and print to serial
+                    buffer = self.data_to_user
+                    i = buffer["count"]
+                    if i >= len(buffer["time_us"]) - 1:
+                        record_data = False
+                        buffer["time_us"][i] = -1
+                        buffer["centroid_pos"][i] = -1
+                        buffer["count"] = i + 1
+                    else:
+                        buffer["time_us"][i] = time_elapse
+                        buffer["centroid_pos"][i] = line_position
+                        buffer["count"] = i + 1 
+
 
                 if self.line_follow_flag.value == False:
                     self.motor.disable()

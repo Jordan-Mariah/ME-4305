@@ -19,6 +19,11 @@ class TaskUser:
     VALID_DIGITS: set = set(map(str, range(10)))
     TERMINATORS: set = {"\r", "\n"}
 
+    LINE_HEADER = "Begin line-follow data"
+    LINE_COLUMNS = "time_us,centroid_pos"
+    LINE_FOOTER = "End of line-follow data"
+    LINE_READY = "Ready for next line-follow run"
+
     #initialize at the begining of the task
     #****new
     def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, sensor_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None):
@@ -70,6 +75,11 @@ class TaskUser:
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
         print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
+
+    def test_busy(self):
+            #returns true if test running, requested, or sending data and otherwise false
+            return bool(self.left_test_flag.value or self.right_test_flag.value
+                    or self.left_data.value["count"] or self.right_data.value["count"] or self.current_test)
 
     def run(self):
         self.print_help()
@@ -260,45 +270,56 @@ class TaskUser:
             yield self.state
 
     def transmit_sample(self):
-        #set the test flag and data for the motor
-        data = self.left_data.value if self.current_test == "left" else self.right_data.value
-        flag = self.left_test_flag if self.current_test == "left" else self.right_test_flag
+        data = self.left_data.value
+
         if not self.pending_output:
-            if self.export_phase == "header": #here we had to use copiolot to format the header string
-                line = ("Begin data: motor={},mode=P,setpoint_rad_s={},kp={},motor_period_ms={},"
-                        "ui_period_ms={},duration_s=2,time_units=us,velocity_units=rad/s,"
-                        "voltage_units=V,battery_voltage={},voltage_min={},voltage_max={}").format(
-                            self.current_test, self.run_setpoint, self.run_kp, self.motor_period_ms,
-                            self.ui_period_ms, self.battery_voltage,
-                            -self.battery_voltage if self.battery_voltage is not None else "unset",
-                            self.battery_voltage)
+            if self.export_phase == "header":
+                line = self.LINE_HEADER
                 self.export_phase = "columns"
-            elif self.export_phase == "columns":#make the csv column names
-                line = "time_us,setpoint_rad_s,velocity_rad_s,limited_voltage_V"
+
+            elif self.export_phase == "columns":
+                line = self.LINE_COLUMNS
                 self.export_phase = "rows"
-            elif self.export_index < data["count"]: #check if an unread sample exists
-                i = self.export_index
-                line = "{},{},{},{}".format(data["time_us"][i], data["setpoint"][i],
-                                           data["velocity"][i], data["voltage"][i])
-                self.export_index += 1
-            elif flag.value:
-                return #If the motor is still collecting thent ry the next scheduling turn
+
             elif self.export_phase == "rows":
-                line = "End of data: " + data["status"]
-                self.export_phase = "finished"
+                if self.export_index < data["count"]:
+                    i = self.export_index
+                    time_us = data["time_us"][i]
+
+                    if time_us == 4294967295:
+                        # Consume the end marker, but don't send it as a data row.
+                        self.export_index += 1
+                        line = self.LINE_FOOTER
+                        self.export_phase = "finished"
+                    else:
+                        line = "{},{}".format(
+                            time_us,
+                            data["centroid_pos"][i],
+                        )
+                        self.export_index += 1
+
+                elif self.line_follow_flag.value:
+                    # Wait for the recorder to add another sample.
+                    return
+
+                else:
+                    # The recorder stopped and there are no more buffered samples.
+                    line = self.LINE_FOOTER
+                    self.export_phase = "finished"
+
             elif self.export_phase == "finished":
-                #Inidicate that the buffers for this run have been released 
                 data["count"] = 0
-                line = "Ready for next test"
+                self.export_index = 0
+                line = self.LINE_READY
                 self.export_phase = "released"
+
             else:
-                #Release dataset after every bytetransmitted.
                 data["count"] = 0
-                self.current_test = ""
+                self.export_index = 0
                 return
+
             self.pending_output = (line + "\r\n").encode()
-        
-        #try to send 128 bytes then report the number accepted
+
         sent = self.serial.write(self.pending_output[:128])
         if sent:
             self.pending_output = self.pending_output[sent:]

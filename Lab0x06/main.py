@@ -40,9 +40,7 @@ def make_data():#buffer: memory that temporalily hold data
     capacity = 2000 // MOTOR_PERIOD_MS + 2
     return Share({
         "time_us": array("L", [0] * capacity), #microseconds elapsed
-        "setpoint": array("f", [0.0] * capacity), #desired wheel rad/s
-        "velocity": array("f", [0.0] * capacity), #Measured wheel rad/s
-        "voltage": array("f", [0.0] * capacity), #Limited controller voltage.
+        "centroid_pos": array("f", [0.0] * capacity), #desired wheel rad/s
         "count": 0, #sample count for indexing arrays
         "status": "completed", #failed to connect if over capacity.
     }, dict)
@@ -158,6 +156,8 @@ def main():
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
     sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
+
+    sensor_data.value["line"] = None
 
     #Create tasks
     left_motor = TaskMotor(
