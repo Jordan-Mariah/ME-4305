@@ -26,8 +26,7 @@ class TaskUser:
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
         self.line_follow_flag = line_follow_flag
-        #****new
-        self.sensor_flag = sensor_flag
+        self.sensor_flag = sensor_flag #added this sensor flag 
         self.left_data = left_data
         self.right_data = right_data
         self.next_effort = next_effort
@@ -71,11 +70,6 @@ class TaskUser:
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
         print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
-
-    def test_busy(self):
-        #check if int he moment we have a test running, requested, or sending data. if not then false
-        return bool(self.line_follow_flag.value or self.left_test_flag.value or self.right_test_flag.value
-                    or self.left_data.value["count"] or self.right_data.value["count"] or self.current_test)
 
     def run(self):
         self.print_help()
@@ -123,17 +117,12 @@ class TaskUser:
 
                 #start the line following here
                 elif low_char == "f":
-                    if self.test_busy():
-                        self.serial.write(b"Romi is too busy and cannot follow right now.\r\n")
-                    elif self.sensor_flag is None:
-                        self.serial.write(b"Sensor flag is not configured.\r\n")
-                    else:
-                        self.sensor_flag.set(True)
-                        self.line_follow_flag.set(True)
+                    self.sensor_flag.set(True)
+                    self.line_follow_flag.set(True)
                     self.state = self.S0_AWAIT_COMMAND
 
                 elif self.test_busy():
-                    self.serial.write(b"; e exits.\r\n")
+                    self.serial.write(b"Busy s clears the flags.\r\n")
                     self.state = self.S0_AWAIT_COMMAND
 
                 #print help menu
@@ -200,7 +189,7 @@ class TaskUser:
 
                 self.new_char = ""
 
-            #check for bytes, read byte, convert byte to text and process text
+            #check for bytes then read byte then convert byte to text and process text
             elif self.state == self.S2_AWAIT_DIGIT_INPUT:
                 if self.serial.any(): #Keep checking for new inputs in buffer
                     buff: bytes = self.serial.read(1) # type: ignore
@@ -211,7 +200,6 @@ class TaskUser:
             elif self.state == self.S3_PROCESS_DIGIT_INPUT:
                 #Digit input logic tree:
                 if self.new_char.lower() == "e":
-                    #****new
                     self.line_follow_flag.set(False)
                     if self.sensor_flag is not None:
                         self.sensor_flag.set(False)
