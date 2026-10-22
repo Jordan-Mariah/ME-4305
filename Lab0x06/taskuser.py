@@ -20,11 +20,14 @@ class TaskUser:
     TERMINATORS: set = {"\r", "\n"}
 
     #initialize at the begining of the task
-    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None):
+    #****new
+    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
         self.line_follow_flag = line_follow_flag
+        #****new
+        self.sensor_flag = sensor_flag
         self.left_data = left_data
         self.right_data = right_data
         self.next_effort = next_effort
@@ -63,13 +66,15 @@ class TaskUser:
         print("| b/B | Equal out velocity of both motors                                      |")
         print("| l/L | Left motor step response and printed results                           |")
         print("| r/R | Right motor step respoinse and print results                           |")
+        print("| f/F | Start line following                                                   |")
+        print("| s/S | Stop line following                                                    |")
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
         print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
 
     def test_busy(self):
-        #returns true if test running, requested, or sending data and otherwise false
-        return bool(self.left_test_flag.value or self.right_test_flag.value
+        #check if int he moment we have a test running, requested, or sending data. if not then false
+        return bool(self.line_follow_flag.value or self.left_test_flag.value or self.right_test_flag.value
                     or self.left_data.value["count"] or self.right_data.value["count"] or self.current_test)
 
     def run(self):
@@ -99,14 +104,36 @@ class TaskUser:
                 # Convert recieved char to a lowercase 
                 low_char = self.new_char.lower()
 
+                #check if exit requested
                 if low_char == "e":
-                    #request program to exit
+                    #clear request for line sensing
+                    self.line_follow_flag.set(False)
+                    if self.sensor_flag is not None:
+                        self.sensor_flag.set(False)
+                    #send request for program exit
                     self.exit_initiated = True
                     return
 
-                #rejects commands while testing happening unless comand is e
+                #here stop the line following, but keep going in the program
+                elif low_char == "s": 
+                    self.line_follow_flag.set(False)
+                    if self.sensor_flag is not None:
+                        self.sensor_flag.set(False)
+                    self.state = self.S0_AWAIT_COMMAND
+
+                #start the line following here
+                elif low_char == "f":
+                    if self.test_busy():
+                        self.serial.write(b"Romi is too busy and cannot follow right now.\r\n")
+                    elif self.sensor_flag is None:
+                        self.serial.write(b"Sensor flag is not configured.\r\n")
+                    else:
+                        self.sensor_flag.set(True)
+                        self.line_follow_flag.set(True)
+                    self.state = self.S0_AWAIT_COMMAND
+
                 elif self.test_busy():
-                    self.serial.write(b"Motor test busy; only e exits during a run.\r\n")
+                    self.serial.write(b"; e exits.\r\n")
                     self.state = self.S0_AWAIT_COMMAND
 
                 #print help menu
@@ -184,6 +211,10 @@ class TaskUser:
             elif self.state == self.S3_PROCESS_DIGIT_INPUT:
                 #Digit input logic tree:
                 if self.new_char.lower() == "e":
+                    #****new
+                    self.line_follow_flag.set(False)
+                    if self.sensor_flag is not None:
+                        self.sensor_flag.set(False)
                     #exit even if theres an unfinished numeric entry.
                     self.exit_initiated = True
                     return
