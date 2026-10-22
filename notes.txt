@@ -1,0 +1,27 @@
+# Github commands 
+    #Setup
+        # Go to your local copy of the GitHub repository.
+        Set-Location "C:\Users\jorda\Documents\Romi Robot\Project Design\ME-4305"
+
+        # Download and integrate the latest changes from GitHub before editing.
+        git pull origin main
+
+        # See which files you changed, added, or deleted.
+        git status
+    #Share changes
+        # Go to your local copy of the repository.
+        Set-Location "C:\Users\jorda\Documents\Romi Robot\Project Design\ME-4305"
+
+        # Review the list of changes before staging them.
+        git status
+
+        # Stage all changes in this repository.
+        git add . #for folder
+        git add Lab0x07\encoder.py #for file 
+
+        # Save the staged changes locally with a short description.
+        git commit -m "Describe your changes"
+
+        # Upload your commit to GitHub.
+        git push
+

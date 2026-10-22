@@ -9,7 +9,7 @@ from array import array
 from driver import Motor
 from encoder import Encoder
 from line_calibration import load_calibration, save_calibration
-from pyb import Timer, Pin, USB_VCP
+from pyb import Timer, Pin, I2C, USB_VCP
 import cotask # type: ignore
 #creates the driver and task objects, then repeatedly schedules their generators
 
@@ -280,4 +280,15 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # PB8 = SCL, PB9 = SDA on your board
+    i2c = I2C(1, I2C.CONTROLLER, baudrate=100_000)
+
+    devices = i2c.scan()
+    print("I2C addresses:", [hex(addr) for addr in devices])
+
+    # Read the BNO055 chip ID
+    address = 0x28
+    if address in devices:
+        chip_id = i2c.mem_read(1, address, 0x00)[0]
+        print("Chip ID:", hex(chip_id))
+        print("BNO055 detected:", chip_id == 0xA0)
