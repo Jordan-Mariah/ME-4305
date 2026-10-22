@@ -216,10 +216,12 @@ class TaskMotor:
                 self.state = self.S0_IDLE
 
             elif self.state == self.S6_FOLLOW_LINE:
+                self.encoder.update()
+
                 # Get share data, set velocity and sensor data
                 line_position: float = self.sensor_data.value["line"] if not self.sensor_data.value["line"] == None else 0
                 target_velocity: float = self.active_setpoint
-                current_velocity = self.encoder.get_velocity()
+                current_velocity = self.encoder_sign * self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution
 
                 # Scale speed if sensor indicates line it curving left or right.
                 if self.side == "right":
@@ -228,7 +230,7 @@ class TaskMotor:
                     target_velocity += target_velocity * self.MAX_TURN_RATIO * (line_position / 25)
 
                 # Set next motor voltage
-                pid_out = self.pid.next_output(target_velocity, current_velocity) * 2 * pi / self.counts_per_revolution
+                pid_out = self.pid.next_output(target_velocity, current_velocity) 
                 Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
                 self.motor.set_effort(self.driver_sign * 100 * Vsat / self.battery_voltage)
 

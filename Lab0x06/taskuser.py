@@ -21,7 +21,7 @@ class TaskUser:
 
     #initialize at the begining of the task
     #****new
-    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
+    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, sensor_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag

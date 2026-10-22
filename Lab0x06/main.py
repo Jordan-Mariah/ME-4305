@@ -199,6 +199,7 @@ def main():
         right_test_flag=right_test_flag,# Starts/checks the right motor test
         left_data=left_data,            # Reads left test samples for serial output
         line_follow_flag=line_follow_flag, # Flag for line following behavior
+        sensor_flag=sensor_flag,        # Enables and dissables the line sensor
         right_data=right_data,          # Reads right test samples for serial output
         next_effort=next_effort,        # Reads/updates velocity setpoint
         next_kp=next_kp,                # UI will update through gain entry
