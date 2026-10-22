@@ -46,20 +46,14 @@ class LineSensor:
     ):
         """
         pins:
-            13 ADC-capable pin objects in driver reading order.
-        channels:
-            Corresponding printed sensor numbers, 1 through 13.
-        positions_mm:
-            Corresponding lateral positions; positive toward Romi's left.
-        timer:
-            A free pyb.Timer supporting timed ADC acquisition.
-            This driver configures its frequency.
-        sample_count:
-            Number of samples averaged per channel.
-        sample_rate_hz:
-            Samples per second PER CHANNEL; at most 5000.
-        min_span:
-            Minimum acceptable black-minus-white ADC difference.
+            the driver reader order has 13 ADC-capable pin objects channels:
+            They then correspond to printed sensor numbers, 1 through 13.
+        positions_mm: to lateral positions which are positive toward Romi's left.
+        timer:A free pyb.Timer supporting timed ADC acquisition.
+        This driver configures its frequency.
+        sample_count:Number of samples averaged per channel.
+        sample_rate_hz:Samples per second PER CHANNEL; at most 5000.
+        min_span:Minimum acceptable black-minus-white ADC difference.
         """
         self.channels = tuple(channels)
         self.positions_mm = tuple(float(p) for p in positions_mm)
@@ -74,7 +68,7 @@ class LineSensor:
             raise ValueError("Provide exactly 13 pins, channels, and positions")
 
         if sorted(self.channels) != list(range(1, 14)):
-            raise ValueError("Channels must contain printed numbers 1 through 13")
+            raise ValueError("Channels must contain numbers 1 through 13")
 
         if not all(isfinite(p) for p in self.positions_mm):
             raise ValueError("Sensor positions must be finite")
@@ -114,7 +108,6 @@ class LineSensor:
 
     def read_averages(self):
         """Average all channels.
-
         Array is reused then rewritten
         Copy it immediately if the readings must be retained.
         """
@@ -130,7 +123,7 @@ class LineSensor:
         return self.averages
 
     def set_calibration(self, calibration):
-        """Validate and copy measured black/white ADC endpoints."""
+        """Validate and copy measured black/white ADC endpoints"""
         validate_calibration(
             calibration,
             self.channels,
@@ -150,7 +143,6 @@ class LineSensor:
 
     def read_weights(self):
         """get readings and return blackness weights
-
         White is a weight of about 0 and then black is approximately 1
         The array returned is reused on each next call
         """
