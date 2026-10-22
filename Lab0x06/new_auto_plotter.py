@@ -82,7 +82,7 @@ class LineReader: #added
 
 #wait for firmware acknowledgements
 def wait_for(reader, expected): #added
-    #** Identify which firmware response is missing when a timeout occurs.
+    #figureout firware reply missing
     print(f"Waiting for: {expected!r}") #added
     #calc for when to stop waiting
     deadline = monotonic() + FIRST_RESPONSE_TIMEOUT #added
@@ -95,7 +95,7 @@ def wait_for(reader, expected): #added
         print(line) #added
         #does recieved string match expected
         if line == expected: #added
-            return line #* Return the acknowledgement for callers.
+            return line #acknowledgment
         #check for firmwareerrors
         if "out of range" in line or line.startswith(("Invalid input", "Motor test busy", "Test rejected")): #added
             raise RuntimeError(line) #added
@@ -230,6 +230,7 @@ def main():
 
 #copy the line folowing data to PC
 def collect_line_dataset(reader, filename):
+    #dealine for waiting
     deadline = monotonic() + FIRST_RESPONSE_TIMEOUT + LINE_DURATION_S
     line = reader.read(deadline)
     while not line.startswith("Begin data: "):
@@ -242,7 +243,7 @@ def collect_line_dataset(reader, filename):
                 line = reader.read(monotonic() + BETWEEN_LINES_TIMEOUT)
                 if line.startswith(END_MARKER):
                     file.write("# " + line + "\n")
-                    if line != "End of data: completed":
+                    if line != "ECompleted! that was the end of the data":
                         raise ValueError("Line run did not complete")
                     return
                 file.write(line + "\n")
@@ -251,42 +252,72 @@ def collect_line_dataset(reader, filename):
             raise
 
 
-#
+def plot_line_data(filename):
+    from matplotlib import pyplot as plt
+
+    times = []
+    positions = []
+
+    with filename.open() as file:
+        reader = csv.DictReader(
+            line for line in file if not line.startswith("#")
+        )
+        for row in reader:
+            position = row["centroid_mm"].strip()
+            if position.lower() in ("none", "nan", "undefined", ""):
+                continue
+            times.append(float(row["time_us"]) / 1_000_000)
+            positions.append(float(position))
+
+    plt.scatter(times, positions, s=10)
+    plt.axhline(0, color="black", linestyle="--")
+    plt.xlabel("elapsed time (s) from MCU")
+    plt.ylabel("Centroid (mm)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(filename.with_suffix(".png"))
+    plt.close()
+
+#run, send settings for line following to romi, requests run saves data, attempts to stop
 def run_line_mode():
-    from serial import Serial, SerialException
+    from serial import Serial
+
     if not LINE_FIRMWARE_READY:
-        raise SystemExit("Line mode requires matching firmware commands and metadata; leave disabled until implemented.")
-    if (not all(math.isfinite(value) for value in (LINE_BASE_SPEED, LINE_KP, LINE_DURATION_S))
-            or LINE_BASE_SPEED <= 0 or LINE_KP < 0 or LINE_DURATION_S <= 0):
-        raise ValueError("Invalid line-run settings")
+        raise SystemExit("Matching board commands are not implemented yet.")
+
     OUTPUT_DIRECTORY.mkdir(exist_ok=True)
     run_dir = OUTPUT_DIRECTORY / datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
     run_dir.mkdir()
-    try:
-        with Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser:
-            ser.reset_input_buffer()
-            reader = LineReader(ser)
-            try:
-                configure_number(ser, reader, b"v", "Enter velocity setpoint [rad/s]:", float(LINE_BASE_SPEED))
-                configure_number(ser, reader, b"o", "Enter outer Kp [(rad/s)/mm]:", float(LINE_KP))
-                configure_number(ser, reader, b"d", "Enter line duration [s]:", float(LINE_DURATION_S))
-                ser.write(b"f")
-                filename = run_dir / "line_following.csv"
-                collect_line_dataset(reader, filename)
-                print("Saved data to {}".format(filename))
-            finally:
-                ser.write(b"e")
-    except (SerialException, TimeoutError, ValueError, RuntimeError) as error:
-        raise SystemExit("Line collection failed: {}".format(error)) from error
-    except KeyboardInterrupt:
-        raise SystemExit("Line collection interrupted; serial port closed.")
+
+    with Serial(
+        SERIAL_PORT,
+        baudrate=BAUDRATE,
+        timeout=SERIAL_TIMEOUT,
+        write_timeout=2.0,) as ser:
+        reader = LineReader(ser)
+
+        try:
+            configure_number(
+                ser, reader, b"v","Enter velocity setpoint [rad/s]:",float(LINE_BASE_SPEED),
+            )
+            configure_number(
+                ser, reader, b"p","Enter outer [V/(rad/s)]:",float(LINE_KP),
+            )
+
+            ser.write(b"f")
+
+            filename = run_dir / "line_following.csv"
+            collect_line_dataset(reader, filename)
+            print("Saved data to", filename)
+
+        finally:
+            ser.write(b"e")
 
 
-#***new
 if __name__ == "__main__":
     if RUN_MODE == "wheel":
         main()
     elif RUN_MODE == "line":
         run_line_mode()
     else:
-        raise SystemExit("RUN_MODE must be wheel or line")
+        raise SystemExit("run in wheel or line mode")
