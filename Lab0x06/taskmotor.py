@@ -85,17 +85,17 @@ class TaskMotor:
                 self.data_to_user["status"] = "completed" #compkleted is default outcome
                #both setting must be real numbers and positive
                 if self.battery_voltage is None or self.counts_per_revolution is None:
-                    raise ValueError("Set battery voltage and counts per wheel revolution in main.py")
+                    raise ValueError(" battery voltage and counts per wheel revolution should be set in main.py")
                 if (not isfinite(self.battery_voltage) or self.battery_voltage <= 0
                         or not isfinite(self.counts_per_revolution) or self.counts_per_revolution <= 0):
-                    raise ValueError("Battery voltage and encoder scale must be finite and positive")
+                    raise ValueError("keep the Battery voltage and encoder scale finite/positive")
                 #each dirrection must be 1 or -1
                 if self.driver_sign not in (-1, 1) or self.encoder_sign not in (-1, 1):
                     raise ValueError("Set verified driver and encoder signs in main.py")
                 self.active_setpoint = float(self.next_effort.value) #setpoint = (1550 encoder count/s)/(2pi/1437)  = 6.8 rad/s
                 active_kp = float(self.next_kp.value) if self.next_kp is not None else self.KP
                 if not isfinite(self.active_setpoint) or not isfinite(active_kp) or active_kp < 0:
-                    raise ValueError("Setpoint and gain must be finite; gain must be nonnegative")
+                    raise ValueError("Setpoint and gain must be finite and gain must be positive or 0")
                 self.pid.set_kp(active_kp)
                 self.pid.reset()
                 self.settle_start = ticks_us()
@@ -104,7 +104,7 @@ class TaskMotor:
             #settle the motor
             elif (self.state == self.S2_SETTLE): 
                 self.encoder.update() #refresh encoders measurments but dont repetedly zero
-                #elapsed settling time: the difference between the current time and the start of the settling time
+                #the difference between the current time and the start is the settling time
                 self.elapsed_settling = ticks_diff(ticks_us(), self.settle_start)
                 #give 1 second for the wheel to die before the next trial starts
 
@@ -118,9 +118,9 @@ class TaskMotor:
                 self.encoder.zero()
                 self.pid.reset()
 
-                # Set first-cycle time values
+                # here we set the cycle time values for the first time
                 self.sample_start = ticks_us()
-                #initial P command. then sample_start marks the step.
+                #right now we only have proportional controll
                 pid_out = self.pid.next_output(self.active_setpoint, 0.0)
                 if not isfinite(pid_out):
                     self.motor.disable()
@@ -130,7 +130,7 @@ class TaskMotor:
                 # Match sample loggingwith teh MOTOR_PERIOD_MS passed in main.py
                 # convert the period from ms to us for ticks_us().
                 self.sample_interval = self.period_ms * 1000
-                self.sample_duration = 2_000_000 #2 seconds
+                self.sample_duration = 5_000_000 #2 seconds
                 self.sample_next = self.sample_start #first sample imidiately scheduled
 
 
@@ -150,19 +150,20 @@ class TaskMotor:
                 self.encoder.update()
 
                 # Update motor for each itteration of run
-                #Encoder reports counts/s
+                #here we are tracking the encoder usinging encoder objects
                 current_velocity = (self.encoder_sign * self.encoder.get_velocity()
                                     * 2 * pi / self.counts_per_revolution)
-                #next_effort -> velocity setpoint in rad/s.
+                #where next_effort is the velocity setpoint in rad/s
                 target_velocity: float = self.active_setpoint
                 pid_out = self.pid.next_output(target_velocity, current_velocity)
 
-                # Process controler output (saturate voltage and apply Kpwm)
-                # Reject invalid output clamp the signs, and convert volts to duty
+                # process the outputs of the controller so then we can apply Kpwm
+                # do not take invaludi output clamp
+                #convert volts to duty
                 if not isfinite(pid_out):
                     self.motor.disable()
                     raise ValueError("Controller requested a nonfinite voltage")
-                pid_out += 1.5 * self.driver_sign # Voltage offset to compensate for... something...
+                #dissable to start: pid_out += 1.5 * self.driver_sign # Voltage offset to compensate for... something...
                 Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
                 pwm_pct = self.driver_sign * 100 * Vsat / self.battery_voltage
 

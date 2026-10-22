@@ -19,12 +19,19 @@ SERIAL_TIMEOUT = 0.25
 # need a line ending. Students will extend this into the duty-cycle and
 # two-motor command sequence. A multicharacter numeric value does need the line
 # ending expected by the firmware so that it knows when entry is complete.
-#** One carriage return completes entry without leaving a second terminator queued.
+
 NUMERIC_LINE_ENDING = "\r" #changed
 
 #Here we test duty cycle by reeplacing the starter's single START_COMMAND with two motor/duty pairs
 #For tests we now have three different proportional gain trials 
 #tune these
+#now have a wheel 
+RUN_MODE = "wheel"
+LINE_BASE_SPEED = 2.0
+LINE_KP = 0.1
+LINE_DURATION_S = 2.0
+LINE_FIRMWARE_READY = False
+
 TESTS = (("left", 5.0, 0.7),("right", 5.0, 0.7))
 # Stop waiting and report an error instead of hanging forever if the firmware
 # does not respond or stops transmitting partway through a dataset.
@@ -178,7 +185,7 @@ def main():
     #import pyserial class and serial exception class
     from serial import Serial, SerialException
     # Validate trials against with UI before opening the port
-    #* Allow one trial or a sequence of trials.
+    #* just one trial or a sequence of trials.
     if not TESTS:
         raise ValueError("Configure at least one trial")
     for motor, setpoint, kp in TESTS:
@@ -221,5 +228,65 @@ def main():
         raise SystemExit("Collection interrupted; serial port closed.") #added
 
 
+#copy the line folowing data to PC
+def collect_line_dataset(reader, filename):
+    deadline = monotonic() + FIRST_RESPONSE_TIMEOUT + LINE_DURATION_S
+    line = reader.read(deadline)
+    while not line.startswith("Begin data: "):
+        line = reader.read(deadline)
+
+    with filename.open("x", encoding="utf-8") as file:
+        file.write("# " + line + "\n")
+        try:
+            while True:
+                line = reader.read(monotonic() + BETWEEN_LINES_TIMEOUT)
+                if line.startswith(END_MARKER):
+                    file.write("# " + line + "\n")
+                    if line != "End of data: completed":
+                        raise ValueError("Line run did not complete")
+                    return
+                file.write(line + "\n")
+        except (Exception, KeyboardInterrupt):
+            file.write("# Collection incomplete\n")
+            raise
+
+
+#
+def run_line_mode():
+    from serial import Serial, SerialException
+    if not LINE_FIRMWARE_READY:
+        raise SystemExit("Line mode requires matching firmware commands and metadata; leave disabled until implemented.")
+    if (not all(math.isfinite(value) for value in (LINE_BASE_SPEED, LINE_KP, LINE_DURATION_S))
+            or LINE_BASE_SPEED <= 0 or LINE_KP < 0 or LINE_DURATION_S <= 0):
+        raise ValueError("Invalid line-run settings")
+    OUTPUT_DIRECTORY.mkdir(exist_ok=True)
+    run_dir = OUTPUT_DIRECTORY / datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+    run_dir.mkdir()
+    try:
+        with Serial(SERIAL_PORT, baudrate=BAUDRATE, timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser:
+            ser.reset_input_buffer()
+            reader = LineReader(ser)
+            try:
+                configure_number(ser, reader, b"v", "Enter velocity setpoint [rad/s]:", float(LINE_BASE_SPEED))
+                configure_number(ser, reader, b"o", "Enter outer Kp [(rad/s)/mm]:", float(LINE_KP))
+                configure_number(ser, reader, b"d", "Enter line duration [s]:", float(LINE_DURATION_S))
+                ser.write(b"f")
+                filename = run_dir / "line_following.csv"
+                collect_line_dataset(reader, filename)
+                print("Saved data to {}".format(filename))
+            finally:
+                ser.write(b"e")
+    except (SerialException, TimeoutError, ValueError, RuntimeError) as error:
+        raise SystemExit("Line collection failed: {}".format(error)) from error
+    except KeyboardInterrupt:
+        raise SystemExit("Line collection interrupted; serial port closed.")
+
+
+#***new
 if __name__ == "__main__":
-    main()
+    if RUN_MODE == "wheel":
+        main()
+    elif RUN_MODE == "line":
+        run_line_mode()
+    else:
+        raise SystemExit("RUN_MODE must be wheel or line")

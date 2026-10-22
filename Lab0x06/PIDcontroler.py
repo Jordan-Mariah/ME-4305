@@ -97,7 +97,7 @@ class PID():
         #add the accumulated error from the interval to the error sum
         self.error_last = self.error_now
 
-        print(self.onTarget(0.1))
+        # print(self.onTarget(0.1))
         output = sum(out)
 
         return output

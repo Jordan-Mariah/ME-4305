@@ -59,11 +59,12 @@ class TaskUser:
         print("| h/H | Print help menu                                                        |")
         print("| v/V | Enter velocity setpoint rad/s                                          |")
         print("| p/P | Enter proportional gain  in V/(rad/s)                                  |")
+        print("| b/B | Equal out velocity of both motors                                      |")
         print("| l/L | Left motor step response and printed results                           |")
         print("| r/R | Right motor step respoinse and print results                           |")
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
-        print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0..1000; max 24 characters.")
+        print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
 
     def test_busy(self):
         #returns true if test running, requested, or sending data and otherwise false
@@ -112,8 +113,22 @@ class TaskUser:
                     self.print_help()
                     self.state = self.S0_AWAIT_COMMAND
 
+                elif low_char == "b":
+                    self.run_setpoint = self.next_effort.value
+                    #here we store the output gain
+                    self.run_kp = (
+                        self.next_kp.value
+                        #if no gainw as shared use .001 for the gain
+                        if self.next_kp is not None
+                        else 0.001
+                    )
+                    self.left_test_flag.set(True)
+                    self.right_test_flag.set(True)
+                    self.state = self.S0_AWAIT_COMMAND
+
                 #get reference to left motor shared dict
                 elif low_char == "l":
+
                     # Make sure there is no residual data in left data buffer before starting new test
                     data = self.left_data.value 
 

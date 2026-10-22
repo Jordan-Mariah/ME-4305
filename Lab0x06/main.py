@@ -23,10 +23,10 @@ from line_sensor import(
 #config constants
 BATTERY_VOLTAGE = 8
 COUNTS_PER_WHEEL_REVOLUTION = 12 * 3952 / 33
-LEFT_DRIVER_SIGN = 1
-LEFT_ENCODER_SIGN = 1
-RIGHT_DRIVER_SIGN = 1
-RIGHT_ENCODER_SIGN = 1
+LEFT_DRIVER_SIGN = -1
+LEFT_ENCODER_SIGN = -1
+RIGHT_DRIVER_SIGN = -1
+RIGHT_ENCODER_SIGN = -1
 # Initial P gain in V/(rad/s) -tunned in testing
 INITIAL_KP = 0.1
 # Keep timing in firmware configuration
@@ -269,7 +269,7 @@ def main():
     finally:
         left_mot.disable()
         right_mot.disable()
-        print(cotask.task_list.profile())
+        #print(cotask.task_list.profile())
     
     
 
