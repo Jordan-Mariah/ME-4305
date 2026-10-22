@@ -6,7 +6,7 @@ from encoder import Encoder
 from tshare import Share
 from PIDcontroler import PID
 from math import pi, isfinite
-
+import line_sensor # Only for constant access. Maybe a better solution
 
 class TaskMotor:
 
@@ -23,6 +23,8 @@ class TaskMotor:
     KP: float = 0.001
     KI: float = 0.0001
     KD: float = 0
+    KM: float = 0.7 # V / (rad/s)
+    MAX_TURN_RATIO: float = 0.2 # Max multiplier applied to target speed to stay on line
 
 
     '''1) determining whethere motor driver side is left or right 
@@ -45,7 +47,7 @@ class TaskMotor:
         self.side = name
         #config based on voltage encoder scale, and wheel sign
         self.battery_voltage = battery_voltage
-        self.counts_per_revolution = counts_per_revolution
+        self.counts_per_revolution: float = counts_per_revolution
         self.driver_sign = driver_sign
         self.encoder_sign = encoder_sign
         #same period for scheduler execution and sample log
@@ -58,6 +60,7 @@ class TaskMotor:
             kp = self.KP,
             # ki = self.KI,
             # kd = self.KD,
+            ff_gain=self.KM
         )
 
         # Set starting values
@@ -74,6 +77,8 @@ class TaskMotor:
                 if self.test_flag.value == True:
                     # Mark the task active and let its next scheduled turn prepare the motor.
                     self.state = self.S1_PREPARE
+                if self.line_follow_flag.value == True:
+                    self.state = self.S6_FOLLOW_LINE
 
             #inidcates the starting state of the FSM
             elif (self.state == self.S1_PREPARE): 
@@ -159,12 +164,12 @@ class TaskMotor:
                 pid_out = self.pid.next_output(target_velocity, current_velocity)
 
                 # process the outputs of the controller so then we can apply Kpwm
-                # do not take invaludi output clamp
+                # do not take invaludi output clamp.
+
                 #convert volts to duty
                 if not isfinite(pid_out):
                     self.motor.disable()
                     raise ValueError("Controller requested a nonfinite voltage")
-                #dissable to start: pid_out += 1.5 * self.driver_sign # Voltage offset to compensate for... something...
                 Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
                 pwm_pct = self.driver_sign * 100 * Vsat / self.battery_voltage
 
@@ -201,7 +206,24 @@ class TaskMotor:
                 self.state = self.S0_IDLE
 
             elif self.state == self.S6_FOLLOW_LINE:
+                # Get share data, set velocity and sensor data
                 line_position: float = self.sensor_data.value["line"]
-                
+                target_velocity: float = self.active_setpoint.value
+                current_velocity = self.encoder.get_velocity()
 
+                # Scale speed if sensor indicates line it curving left or right.
+                if self.side == "right":
+                    target_velocity *= self.MAX_TURN_RATIO * (line_position / -24)
+                elif self.side == "left":
+                    target_velocity *= self.MAX_TURN_RATIO * (line_position / 25)
+
+                # Set next motor voltage
+                pid_out = self.pid.next_output(target_velocity, current_velocity) * 2 * pi / self.counts_per_revolution
+                Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
+                self.motor.set_effort(self.driver_sign * 100 * Vsat / self.battery_voltage)
+
+                if self.line_follow_flag.value == False:
+                    self.motor.disable()
+                    self.state = self.S0_IDLE
+                
             yield self.state

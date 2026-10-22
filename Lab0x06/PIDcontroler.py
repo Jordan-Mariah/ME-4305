@@ -21,7 +21,7 @@ class PID():
     output_gain: float
     output_bias: float
 
-    def __init__(self, kp = None, ki = None, kd = None, **kwargs) -> None:
+    def __init__(self, kp = None, ki = None, kd = None, ff_gain = None, **kwargs) -> None:
         '''Pass in values for kp, ki, kd, or any other special parameters'''
 
         # Check passed parameters and set object variables
@@ -48,6 +48,14 @@ class PID():
                 raise TypeError(f"{self}: kd is not type 'float'")
         else:
             self.kd = None
+
+        if not ff_gain == None:
+            if isinstance(ff_gain, float):
+                self.ff_gain = ff_gain
+            else:
+                raise TypeError(f"{self}: ff_gain is not type 'float'")
+        else:
+            self.ff_gain = None
 
         # Catch all other arguments
         for arg, val in kwargs.items():
