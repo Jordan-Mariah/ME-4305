@@ -94,6 +94,11 @@ class PID():
             outki = self.error_sum * self.ki
             out.append(outki)
 
+        # Feed forward gain
+        if not self.ff_gain == None:
+            outff = target * self.ff_gain
+            out.append(outff)
+
         #add the accumulated error from the interval to the error sum
         self.error_last = self.error_now
 
@@ -133,3 +138,9 @@ class PID():
         if not isinstance(output_bias, float):
             raise TypeError(f"{self}: output_bias is not type 'float'")
         self.output_bias = output_bias
+
+
+    def set_feed_foward_gain(self, ff_gain: float):
+        if not isinstance(ff_gain, float):
+            raise TypeError(f"{self}: ff_gain is not type 'float'")
+        self.ff_gain = ff_gain

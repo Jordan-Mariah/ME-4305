@@ -20,10 +20,11 @@ class TaskUser:
     TERMINATORS: set = {"\r", "\n"}
 
     #initialize at the begining of the task
-    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None):
+    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
+        self.line_follow_flag = line_follow_flag
         self.left_data = left_data
         self.right_data = right_data
         self.next_effort = next_effort

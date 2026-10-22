@@ -30,13 +30,14 @@ class TaskMotor:
     3) Inititializing timers for motor 
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
-    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, name: str,
+    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, name: str,
                  battery_voltage=None, counts_per_revolution=None,
                  driver_sign=None, encoder_sign=None, next_kp=None, period_ms=100):
         #Pull args
         self.motor = motor
         self.encoder = encoder
         self.test_flag = test_flag
+        self.line_follow_flag = line_follow_flag
         self.next_effort = next_effort
         self.next_kp = next_kp #gain from main.py
         self.data_to_user = data.value #from the the dictionary allocated in main.py.

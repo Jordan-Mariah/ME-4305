@@ -151,6 +151,7 @@ def main():
 
     left_test_flag = Share(False, bool)
     right_test_flag = Share(False, bool)
+    line_follow_flag = Share(False, bool)
     left_data = make_data() #\preallocate a buffers for each wheel seperately.
     right_data = make_data()
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
@@ -163,6 +164,7 @@ def main():
         motor=left_mot,                 # Motor-driver object controlling the left motor
         encoder=left_encoder,           # Encoder object measuring the left wheel position
         test_flag=left_test_flag,       # Shared flag used to request/indicate a left-motor test
+        line_follow_flag=line_follow_flag, # Flag for line following behavior
         next_effort=next_effort,        #Shared velocity setpoint (rad/s)
         next_kp=next_kp,                #Gain selected for next test
         data=left_data,                 #left motor shared response motors
@@ -179,6 +181,7 @@ def main():
         motor=right_mot,                # Motor-driver object controlling the right motor
         encoder=right_encoder,          # Encoder object measuring the right wheel position
         test_flag=right_test_flag,      # Shared flag used to request/indicate a right-motor test
+        line_follow_flag=line_follow_flag, # Flag for line following behavior
         next_effort=next_effort,        # Shared velocity setpoint (rad/s)
         next_kp=next_kp,                # Gain selected for next test-PID instance
         data=right_data,                # Shared response buffers-right motor
@@ -195,6 +198,7 @@ def main():
         left_test_flag=left_test_flag,  # Starts/checks the left motor test
         right_test_flag=right_test_flag,# Starts/checks the right motor test
         left_data=left_data,            # Reads left test samples for serial output
+        line_follow_flag=line_follow_flag, # Flag for line following behavior
         right_data=right_data,          # Reads right test samples for serial output
         next_effort=next_effort,        # Reads/updates velocity setpoint
         next_kp=next_kp,                # UI will update through gain entry
