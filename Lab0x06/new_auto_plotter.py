@@ -11,7 +11,7 @@ from pathlib import Path #added
 from time import monotonic
 
 # Serial-port settings. Change SERIAL_PORT to the computer's com port
-SERIAL_PORT = "COM6"
+SERIAL_PORT = "COM5"
 BAUDRATE = 115_200
 SERIAL_TIMEOUT = 0.25
 
@@ -26,13 +26,13 @@ NUMERIC_LINE_ENDING = "\r" #changed
 #For tests we now have three different proportional gain trials 
 #tune these
 #now have a wheel 
-RUN_MODE = "wheel"
+RUN_MODE = "line"
 LINE_BASE_SPEED = 2.0
-LINE_KP = 0.1
+LINE_INNER_KP = 0.1
 LINE_DURATION_S = 2.0
-LINE_FIRMWARE_READY = False
+LINE_FIRMWARE_READY = True
 
-TESTS = (("left", 5.0, 0.7),("right", 5.0, 0.7))
+TESTS = (("left", 5.0, 0.4),("right", 5.0, 0.4))
 # Stop waiting and report an error instead of hanging forever if the firmware
 # does not respond or stops transmitting partway through a dataset.
 # monotonic() returns a steadily increasing time in seconds. Its starting value
@@ -243,7 +243,7 @@ def collect_line_dataset(reader, filename):
                 line = reader.read(monotonic() + BETWEEN_LINES_TIMEOUT)
                 if line.startswith(END_MARKER):
                     file.write("# " + line + "\n")
-                    if line != "ECompleted! that was the end of the data":
+                    if line != "End of data: completed":
                         raise ValueError("Line run did not complete")
                     return
                 file.write(line + "\n")
@@ -253,6 +253,8 @@ def collect_line_dataset(reader, filename):
 
 
 def plot_line_data(filename):
+    import matplotlib
+    matplotlib.use("Agg")
     from matplotlib import pyplot as plt
 
     times = []
@@ -262,12 +264,22 @@ def plot_line_data(filename):
         reader = csv.DictReader(
             line for line in file if not line.startswith("#")
         )
+        if not reader.fieldnames or not {"time_us", "centroid_mm"}.issubset(reader.fieldnames):
+            print("Cannot plot: board did not send time_us,centroid_mm columns.")
+            return
         for row in reader:
-            position = row["centroid_mm"].strip()
-            if position.lower() in ("none", "nan", "undefined", ""):
+            try:
+                time = float(row["time_us"])
+                position = float(row["centroid_mm"])
+            except (ValueError, TypeError, KeyError):
                 continue
-            times.append(float(row["time_us"]) / 1_000_000)
-            positions.append(float(position))
+            if math.isfinite(time) and math.isfinite(position):
+                times.append(time / 1_000_000)
+                positions.append(position)
+
+    if not times:
+        print("Cannot plot: no defined centroid samples were received.")
+        return
 
     plt.scatter(times, positions, s=10)
     plt.axhline(0, color="black", linestyle="--")
@@ -277,40 +289,70 @@ def plot_line_data(filename):
     plt.tight_layout()
     plt.savefig(filename.with_suffix(".png"))
     plt.close()
+    print("Saved centroid plot to", filename.with_suffix(".png"))
 
 #run, send settings for line following to romi, requests run saves data, attempts to stop
 def run_line_mode():
     from serial import Serial
 
     if not LINE_FIRMWARE_READY:
-        raise SystemExit("Matching board commands are not implemented yet.")
+        raise SystemExit("Fix the board following state before enabling LINE_FIRMWARE_READY.")
+    if LINE_DURATION_S <= 0:
+        raise ValueError("Line duration must be positive")
 
     OUTPUT_DIRECTORY.mkdir(exist_ok=True)
     run_dir = OUTPUT_DIRECTORY / datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
     run_dir.mkdir()
+    filename = run_dir / "line_following.csv"
+    samples = 0
 
-    with Serial(
-        SERIAL_PORT,
-        baudrate=BAUDRATE,
-        timeout=SERIAL_TIMEOUT,
-        write_timeout=2.0,) as ser:
+    with Serial(SERIAL_PORT, baudrate=BAUDRATE,
+                timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser:
         reader = LineReader(ser)
-
         try:
-            configure_number(
-                ser, reader, b"v","Enter velocity setpoint [rad/s]:",float(LINE_BASE_SPEED),
-            )
-            configure_number(
-                ser, reader, b"p","Enter outer [V/(rad/s)]:",float(LINE_KP),
-            )
+            ser.write(b"s")
+            configure_number(ser, reader, b"v",
+                             "Enter velocity setpoint [rad/s]:", float(LINE_BASE_SPEED))
+            configure_number(ser, reader, b"p",
+                             "Enter Kp [V/(rad/s)]:", float(LINE_INNER_KP))
 
-            ser.write(b"f")
-
-            filename = run_dir / "line_following.csv"
-            collect_line_dataset(reader, filename)
-            print("Saved data to", filename)
-
+            with filename.open("x", encoding="utf-8") as file:
+                file.write("# PC requested base_speed_rad_s={},inner_kp={},duration_s={}\n".format(
+                    LINE_BASE_SPEED, LINE_INNER_KP, LINE_DURATION_S))
+                ser.write(b"f")
+                print("Following requested; PC will send s after {} seconds.".format(LINE_DURATION_S))
+                deadline = monotonic() + LINE_DURATION_S
+                columns_seen = False
+                completed = False
+                while monotonic() < deadline:
+                    try:
+                        line = reader.read(deadline)
+                    except TimeoutError:
+                        break
+                    if line.startswith("Begin data: "):
+                        file.write("# " + line + "\n")
+                    elif line.startswith(END_MARKER):
+                        file.write("# " + line + "\n")
+                        completed = line == "End of data: completed"
+                        break
+                    elif line == "time_us,centroid_mm":
+                        file.write(line + "\n")
+                        columns_seen = True
+                    elif columns_seen and len(line.split(",")) == 2:
+                        file.write(line + "\n")
+                        samples += 1
+                    else:
+                        file.write("# Board: " + line + "\n")
+                ser.write(b"s")
+                if not completed:
+                    file.write("# PC ended capture; no successful board footer received\n")
+            print("Saved output to", filename)
+            if samples:
+                plot_line_data(filename)
+            if not samples:
+                print("No centroid samples received. TaskUser must export time_us,centroid_mm data.")
         finally:
+            ser.write(b"s")
             ser.write(b"e")
 
 
