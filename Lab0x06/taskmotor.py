@@ -78,6 +78,16 @@ class TaskMotor:
                     # Mark the task active and let its next scheduled turn prepare the motor.
                     self.state = self.S1_PREPARE
                 if self.line_follow_flag.value == True:
+                    self.active_setpoint = float(self.next_effort.value)
+                    # Activate motor
+                    self.motor.enable()
+                    #Reset position and  time right before step
+                    self.encoder.zero()
+                    self.pid.reset()
+
+                    active_kp = float(self.next_kp.value) if self.next_kp is not None else self.KP
+                    self.pid.set_kp(active_kp)
+
                     self.state = self.S6_FOLLOW_LINE
 
             #inidcates the starting state of the FSM
@@ -207,15 +217,15 @@ class TaskMotor:
 
             elif self.state == self.S6_FOLLOW_LINE:
                 # Get share data, set velocity and sensor data
-                line_position: float = self.sensor_data.value["line"]
-                target_velocity: float = self.active_setpoint.value
+                line_position: float = self.sensor_data.value["line"] if not self.sensor_data.value["line"] == None else 0
+                target_velocity: float = self.active_setpoint
                 current_velocity = self.encoder.get_velocity()
 
                 # Scale speed if sensor indicates line it curving left or right.
                 if self.side == "right":
-                    target_velocity *= self.MAX_TURN_RATIO * (line_position / -24)
+                    target_velocity += target_velocity * self.MAX_TURN_RATIO * (line_position / -24)
                 elif self.side == "left":
-                    target_velocity *= self.MAX_TURN_RATIO * (line_position / 25)
+                    target_velocity += target_velocity * self.MAX_TURN_RATIO * (line_position / 25)
 
                 # Set next motor voltage
                 pid_out = self.pid.next_output(target_velocity, current_velocity) * 2 * pi / self.counts_per_revolution
