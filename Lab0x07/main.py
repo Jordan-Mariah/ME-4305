@@ -155,9 +155,7 @@ def main():
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
-    sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
-
-    sensor_data.value["line"] = None
+    sensor_data = Share({"line": None, "imu": None}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
 
     #Create tasks
     left_motor = TaskMotor(

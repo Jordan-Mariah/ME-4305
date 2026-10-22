@@ -18,6 +18,7 @@ class TaskMotor:
     S4_TAKE_SAMPLES = 4
     S5_STOP_MOTOR = 5
     S6_FOLLOW_LINE = 6
+    S7_MERGE_LEFT = 7
 
     # Other task constants
     KP: float = 0.001
@@ -78,15 +79,7 @@ class TaskMotor:
                     # Mark the task active and let its next scheduled turn prepare the motor.
                     self.state = self.S1_PREPARE
                 if self.line_follow_flag.value == True:
-                    self.active_setpoint = float(self.next_effort.value)
-                    # Activate motor
-                    self.motor.enable()
-                    #Reset position and  time right before step
-                    self.encoder.zero()
-                    self.pid.reset()
-
-                    active_kp = float(self.next_kp.value) if self.next_kp is not None else self.KP
-                    self.pid.set_kp(active_kp)
+                    self.motor_startup()
 
                     self.sample_start = ticks_us()
                     record_data = True
@@ -260,5 +253,21 @@ class TaskMotor:
                 if self.line_follow_flag.value == False:
                     self.motor.disable()
                     self.state = self.S0_IDLE
+
+            elif self.state == self.S7_MERGE_LEFT:
+                
+                yield
                 
             yield self.state
+    
+    
+    def motor_startup(self):
+        self.active_setpoint = float(self.next_effort.value)
+        # Activate motor
+        self.motor.enable()
+        #Reset position and  time right before step
+        self.encoder.zero()
+        self.pid.reset()
+
+        active_kp = float(self.next_kp.value) if self.next_kp is not None else self.KP
+        self.pid.set_kp(active_kp)
