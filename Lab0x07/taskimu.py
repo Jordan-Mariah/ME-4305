@@ -30,11 +30,11 @@ class TaskImu():
                 # Enable read mode if imu flag raised
                 if self.imu_flag.value == True:
 
-
                     self.state = self.S1_READ_YAW
 
             # Reading and data pushing mode
             elif self.state == self.S1_READ_YAW:
-                pass
+                self.sensor_data["imu"] = self.imu.get_yaw()
+
 
             yield self.state
