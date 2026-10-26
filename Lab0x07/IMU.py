@@ -1,14 +1,14 @@
 from micropython import const
 from struct import calcsize, unpack_from, pack
 from time import sleep_ms
-from pyb import I2C
+from pyb import I2C, Pin
 
-IMU_I2C_BUS = const(2)  # where PB10 = SCL and PB11 = SDA
+IMU_I2C_BUS = const(2)  # where PB10 (SCL) and PB11 (SDA) are on bus 2
 
 class BNO055:
-    DEV_ADDR = const(0x28) #may be 29 if this doesnt work
+    DEV_ADDR = const(0x28)
 
-    #register format definitions. Each store register address and and byte format string
+    #register definitions. Each store register address and and byte format string
     class reg:
         EUL_HEADING_MSB = (const(0x1B), b"<B") #most significant byte
         EUL_HEADING_LSB = (const(0x1A), b"<B") #least significant byte
@@ -19,6 +19,8 @@ class BNO055:
         OPR_MODE = (const(0x3D), b"<B") #one byte
         PAGE_ID = (const(0x07), b"B") #IMU has its registers grouped into pages
         UNIT_SEL = (const(0x3B), b"B") #chooses the unit of the sensor output
+        AXIS_MAP_CONFIG = (const(0x41), b"B")
+        AXIS_MAP_SIGN = (const(0x42), b"B")
 
     def __init__(self, bus):
         self._i2c = I2C(bus, I2C.CONTROLLER, baudrate=100000)
@@ -62,7 +64,11 @@ class BNO055:
         # Select m/s^2 for acc., degrees for heading(yaw), and degrees/s for gyro
         self._write_reg(BNO055.reg.UNIT_SEL, 0x00)
 
-        # Start IMU fusion mode: accelerometer + gyroscope
+        # Preserve the default sensor-axis mapping
+        self._write_reg(BNO055.reg.AXIS_MAP_CONFIG, 0x24)#TODO: confirm that sensor Z is vertical before using gyro z as yaw
+        self._write_reg(BNO055.reg.AXIS_MAP_SIGN, 0x00)
+
+        # Start the IMU fusion mode for the  accelerometer + gyroscope
         self._write_reg(BNO055.reg.OPR_MODE, 0x08)
         sleep_ms(10)
 
@@ -76,7 +82,7 @@ class BNO055:
         sleep_ms(20)
 
         try:
-            # Read 22 calibration bytes from page-0 at the addresses 0x55â€“0x6A
+            # Read 22 calibration bytes from page-0 at the addresses 0x55–0x6A
             profile = bytearray(22) 
             #writes the saved settinngs to go back to IMU
             self._i2c.mem_read(profile, self.DEV_ADDR, 0x55)

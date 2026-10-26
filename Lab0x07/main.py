@@ -5,11 +5,14 @@ from taskmotor import TaskMotor
 from taskuser import TaskUser
 from tasksensor import TaskSensor
 from tshare import Share
+from time import ticks_ms, ticks_diff, sleep_ms
 from array import array
 from driver import Motor
 from encoder import Encoder
 from line_calibration import load_calibration, save_calibration
-from pyb import Timer, Pin, USB_VCP
+from pyb import Timer, Pin, USB_VCP, I2C
+from IMU import BNO055, IMU_I2C_BUS
+from IMU_calibration import load_imu_calibration, save_imu_calibration
 import cotask # type: ignore
 #creates the driver and task objects, then repeatedly schedules their generators
 
@@ -34,6 +37,17 @@ MOTOR_PERIOD_MS = 50
 UI_PERIOD_MS = 0
 SENSOR_PERIOD_MS = 50
 
+#dictionary for necessary IMU configuration
+IMU_CONFIG = {
+    "sensor": "BNO055",
+    "sensor_id": "romi_imu_1",
+    "mounting": "original_mount_v1",
+    "mode": 0x08,
+    "unit_sel": 0x00,
+    "axis_map_config": 0x24,
+    "axis_map_sign": 0x00,
+}
+
 
 def make_data():#buffer: memory that temporalily hold data
     #size buffer for the samples int he 2 second test. 
@@ -45,7 +59,7 @@ def make_data():#buffer: memory that temporalily hold data
         "status": "completed", #failed to connect if over capacity.
     }, dict)
 
-def setup_calibration(sensor, force=False):
+def setup_line_calibration(sensor, force=False):
     filename = "line_calibration.json"
 
     if filename in os.listdir() and not force:
@@ -57,7 +71,7 @@ def setup_calibration(sensor, force=False):
         input("Place all 13 sensors above the black line->press Enter.")
         black = list(sensor.read_averages())
 
-        input("Place all 13 sensors above the black line->press Enter.")
+        input("Place all 13 sensors above the white line->press Enter.")
         white = list(sensor.read_averages())
 
         calibration = {
@@ -66,12 +80,54 @@ def setup_calibration(sensor, force=False):
             "white": white,
         }
 
-        save_calibration(
-            filename, calibration, sensor.channels, sensor.min_span
+    sensor.set_calibration(calibration)
+    print("Ready for line calibration")
+    save_calibration(filename, calibration, sensor.channels, sensor.min_span
         )
 
-    sensor.set_calibration(calibration)
-    print("Calibration ready.")
+    
+#fix calibartion or make new calibration json
+def setup_imu_calibration(imu: BNO055, force=False):
+    filename = "imu_calibration.json"
+
+    # Try to restore saved validated profile
+    if not force:
+        try:
+            calibration = load_imu_calibration(filename, IMU_CONFIG)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            print("Need a new IMU calibration", error)
+        else:
+            imu.write_calibration_profile(bytes(calibration["profile"]))
+            print("Restored the saved IMU calibration ")
+            return
+
+    # Need to dissable motors before calling this func.
+    print("For gyroscope calibration dont move the IMU")
+    print("Now hold IMU in six different ways (keep still in each orientation).")
+
+    start = ticks_ms()
+
+    while True:
+        system, gyro, accel, mag = imu.calib_status()
+        print("Gyro:", gyro, "Accelerometer:", accel)
+
+        if gyro == 3 and accel == 3:
+            break #can break bc 3 when fully calibrated
+
+        if ticks_diff(ticks_ms(), start) >= 180_000:
+            raise RuntimeError("Calibration took too long")
+
+        sleep_ms(500)
+
+    # Read the learned settings & save as JSON
+    calibration = {
+        "version": 1,
+        "config": dict(IMU_CONFIG),
+        "profile": list(imu.read_calibration_profile()),
+    }
+
+    save_imu_calibration(filename, calibration, IMU_CONFIG)
+    print("saved IMU calibration")
 
 def main():
     #Create objects to be passed to tasks
@@ -125,6 +181,8 @@ def main():
     #instantiate timer specifically for ADC channels
     sensor_timer = Timer(6)
 
+    #create the IMU object
+
     #instantiate the line sensor object
     line_sensor = LineSensor(
         pins=SENSOR_PINS,
@@ -137,10 +195,14 @@ def main():
     )
 
     
-    #call calibration funciton
+    #dissable motors before calling the calibration functions
     left_mot.disable()
     right_mot.disable()
-    setup_calibration(line_sensor)
+
+    #call calibration funcitons
+    imu = BNO055(bus=IMU_I2C_BUS)#init IMU object and store it in varriable imu
+    setup_line_calibration(line_sensor)
+    setup_imu_calibration(imu)
 
     #Create serial object
     serial = USB_VCP()
@@ -155,7 +217,9 @@ def main():
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
-    sensor_data = Share({"line": None, "imu": None}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
+    sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
+
+    sensor_data.value["line"] = None
 
     #Create tasks
     left_motor = TaskMotor(
