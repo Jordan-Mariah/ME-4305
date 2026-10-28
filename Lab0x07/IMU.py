@@ -24,7 +24,6 @@ class BNO055:
 
     def __init__(self, bus):
         self._i2c = I2C(bus, I2C.CONTROLLER, baudrate=400_000)
-        self._i2c.scan()
         self._buf = bytearray(22)
         self.initialize()  # Add the initialization method discussed earlier
 
