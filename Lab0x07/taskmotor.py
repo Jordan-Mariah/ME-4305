@@ -89,6 +89,7 @@ class TaskMotor:
 
                     self.sample_start = ticks_us()
                     passed_center = False
+                    turn_radius = 0
 
                     self.state = self.S7_MERGE_LANE
 
@@ -286,11 +287,12 @@ class TaskMotor:
                 omega: float = self.sensor_data["imu"](1)
                 current_velocity = self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution * 3.5
 
-                # Re-calculate time to dir switch or mode change (assuming this is relatively constant)
-                turn_radius = current_velocity/omega
-                arc_length = turn_radius * acos( (turn_radius - .5*self.LANE_DISTANCE) / turn_radius)
-                switch_time = arc_length / current_velocity
-                switch_time_us = int(switch_time * 1_000_000)
+                # Re-calculate time to dir switch or mode change if current curve radius is sufficiently different from last
+                if abs(turn_radius - current_velocity/omega) >= 3:
+                    turn_radius = current_velocity/omega
+                    arc_length = turn_radius * acos( (turn_radius - .5*self.LANE_DISTANCE) / turn_radius)
+                    switch_time = arc_length / current_velocity
+                    switch_time_us = int(switch_time * 1_000_000)
 
                 # Check if at or past switch time
                 if ticks_diff(ticks_us(), self.sample_start) >= switch_time_us:
