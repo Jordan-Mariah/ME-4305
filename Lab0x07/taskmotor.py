@@ -255,8 +255,10 @@ class TaskMotor:
                     self.state = self.S0_IDLE
 
             elif self.state == self.S7_MERGE_LEFT:
+                # Assume moter has been initialized
+                pass
+
                 
-                yield
                 
             yield self.state
     

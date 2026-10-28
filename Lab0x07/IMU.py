@@ -23,7 +23,8 @@ class BNO055:
         AXIS_MAP_SIGN = (const(0x42), b"B")
 
     def __init__(self, bus):
-        self._i2c = I2C(bus, I2C.CONTROLLER, baudrate=100000)
+        self._i2c = I2C(bus, I2C.CONTROLLER, baudrate=400_000)
+        self._i2c.scan()
         self._buf = bytearray(22)
         self.initialize()  # Add the initialization method discussed earlier
 
@@ -65,7 +66,7 @@ class BNO055:
         self._write_reg(BNO055.reg.UNIT_SEL, 0x00)
 
         # Preserve the default sensor-axis mapping
-        self._write_reg(BNO055.reg.AXIS_MAP_CONFIG, 0x24)#TODO: confirm that sensor Z is vertical before using gyro z as yaw
+        self._write_reg(BNO055.reg.AXIS_MAP_CONFIG, 0x24) #TODO: confirm that sensor Z is vertical before using gyro z as yaw
         self._write_reg(BNO055.reg.AXIS_MAP_SIGN, 0x00)
 
         # Start the IMU fusion mode for the  accelerometer + gyroscope

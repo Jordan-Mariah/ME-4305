@@ -4,6 +4,7 @@ import os
 from taskmotor import TaskMotor
 from taskuser import TaskUser
 from tasksensor import TaskSensor
+from taskimu import TaskImu
 from tshare import Share
 from time import ticks_ms, ticks_diff, sleep_ms
 from array import array
@@ -212,6 +213,7 @@ def main():
     left_test_flag = Share(False, bool)
     right_test_flag = Share(False, bool)
     line_follow_flag = Share(False, bool)
+    imu_flag = Share(False, bool)
     left_data = make_data() #\preallocate a buffers for each wheel seperately.
     right_data = make_data()
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
@@ -278,6 +280,12 @@ def main():
         sensor_data=sensor_data
     )
 
+    task_imu = TaskImu(
+        imu=imu,
+        imu_flag=imu_flag,
+        sensor_data=sensor_data
+    )
+
     '''while this is set up like a priority scheduler the priority of each is 1 so it behaves like a round robin scheduler'''
     #create the generator and add it to the scheduler
     cotask.task_list.append(
@@ -322,6 +330,17 @@ def main():
             period = SENSOR_PERIOD_MS #Period of Zero keeps current idle-task behavior
         )
     )    
+
+    #create IMU task generator object and add it to the scheduler
+    cotask.task_list.append(
+        cotask.Task(
+            task_imu.run(),
+            name = "IMU Reader",
+            priority = 0,
+            profile = True,
+            period = SENSOR_PERIOD_MS #Period of Zero keeps current idle-task behavior
+        )
+    )
 
     #Advance the generators until the user requests exit.
     try:
