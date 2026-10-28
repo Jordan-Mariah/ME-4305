@@ -5,7 +5,7 @@ from driver import Motor
 from encoder import Encoder
 from tshare import Share
 from PIDcontroler import PID
-from math import pi, isfinite
+from math import pi, isfinite, acos
 import line_sensor # Only for constant access. Maybe a better solution
 
 class TaskMotor:
@@ -18,7 +18,7 @@ class TaskMotor:
     S4_TAKE_SAMPLES = 4
     S5_STOP_MOTOR = 5
     S6_FOLLOW_LINE = 6
-    S7_MERGE_LEFT = 7
+    S7_MERGE_LANE = 7
 
     # Other task constants
     KP: float = 0.001
@@ -26,6 +26,8 @@ class TaskMotor:
     KD: float = 0
     KM: float = 0.7 # V / (rad/s)
     MAX_TURN_RATIO: float = 0.2 # Max multiplier applied to target speed to stay on line
+    MERGE_TURN_RATIO: float = 0.2 # Multiplier applied to target speed when changing lanes
+    LANE_DISTANCE: float = 20
 
 
     '''1) determining whethere motor driver side is left or right 
@@ -33,7 +35,7 @@ class TaskMotor:
     3) Inititializing timers for motor 
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
-    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, name: str,
+    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_direction: Share, name: str,
                  battery_voltage=None, counts_per_revolution=None,
                  driver_sign=None, encoder_sign=None, next_kp=None, period_ms=100):
         #Pull args
@@ -45,6 +47,8 @@ class TaskMotor:
         self.next_kp = next_kp #gain from main.py
         self.data_to_user = data.value #from the the dictionary allocated in main.py.
         self.sensor_data = sensor_data # Dictionary of different sensor outputs
+        self.lane_change_flag = lane_change_flag
+        self.lane_change_direction = lane_change_direction
         self.side = name
         #config based on voltage encoder scale, and wheel sign
         self.battery_voltage = battery_voltage
@@ -85,6 +89,15 @@ class TaskMotor:
                     record_data = True
 
                     self.state = self.S6_FOLLOW_LINE
+
+                if self.lane_change_flag.value == True:
+                    self.motor_startup()
+                    dir = 1 if self.lane_change_direction == "left" else -1
+
+                    self.sample_start = ticks_us()
+                    passed_center = False
+
+                    self.state = self.S7_MERGE_LANE
 
             #inidcates the starting state of the FSM
             elif (self.state == self.S1_PREPARE): 
@@ -254,10 +267,35 @@ class TaskMotor:
                     self.motor.disable()
                     self.state = self.S0_IDLE
 
-            elif self.state == self.S7_MERGE_LEFT:
+            elif self.state == self.S7_MERGE_LANE:
                 # Assume moter has been initialized
-                pass
+                self.encoder.update()
 
+                # Get and set speeds in rad/s and cm/s
+                target_velocity: float = self.active_setpoint
+                if self.side == "right":
+                    target_velocity += target_velocity * self.MAX_TURN_RATIO * dir
+                elif self.side == "left":
+                    target_velocity += target_velocity * self.MAX_TURN_RATIO * -dir
+
+                omega: float = self.sensor_data["imu"](1)
+                current_velocity = self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution * 3.5
+
+                # Re-calculate time to dir switch or mode change (assuming this is relatively constant)
+                turn_radius = current_velocity/omega
+                arc_length = turn_radius * acos( (turn_radius - .5*self.LANE_DISTANCE) / turn_radius)
+                switch_time = arc_length / current_velocity
+                switch_time_us = int(switch_time * 1_000_000)
+
+                # Check if at or past switch time
+                if ticks_diff(ticks_us(), self.sample_start) >= switch_time_us:
+                    if not passed_center:
+                        dir *= -1
+                        self.sample_start = ticks_us()
+                        passed_center = True
+                    else:
+                        self.lane_change_flag.value = False
+                        self.state = self.S6_FOLLOW_LINE
                 
                 
             yield self.state
