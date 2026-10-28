@@ -5,7 +5,7 @@ from driver import Motor
 from encoder import Encoder
 from tshare import Share
 from PIDcontroler import PID
-from math import pi, isfinite, sin
+from math import pi, isfinite, sin, radians
 import line_sensor # Only for constant access. Maybe a better solution
 
 class TaskMotor:
@@ -303,83 +303,14 @@ class TaskMotor:
                 velocity_cm = current_velocity * 3.5 # Convert rad/s to cm/s
                 dt = ticks_diff(ticks_us(), last_time) / 1_000_000 # convert us to s
                 last_time = ticks_us()
-                this_disp = sin(theta) * velocity_cm * dt # this displacement in cm
+                this_disp = sin(radians(theta)) * velocity_cm * dt # this displacement in cm
 
                 displacement += this_disp
                 last_disp = this_disp
 
-                '''Print output for debugging:
-                side: left, vel: 26.813426, displacement: 0.0, dt: 0.000969
-                side: right, vel: 26.372146, displacement: 0.0, dt: 0.000926
-                side: left, vel: 24.149692, displacement: 0.0, dt: 0.04938
-                side: right, vel: 28.64887, displacement: 0.0, dt: 0.049107
-                side: left, vel: 20.899238, displacement: 0.38101852, dt: 0.049775
-                side: right, vel: 31.912288, displacement: 0.5939092, dt: 0.050811
-                side: left, vel: 20.205162, displacement: 1.1367164, dt: 0.050726
-                side: right, vel: 32.324004, displacement: 1.80074544, dt: 0.050637
-                side: left, vel: 19.637136, displacement: 0.36478352, dt: 0.049861
-                side: right, vel: 31.875834, displacement: 0.54617832, dt: 0.049922
-                side: left, vel: 19.811526, displacement: 1.203807, dt: 0.04942
-                side: right, vel: 31.498268, displacement: 1.8699084, dt: 0.049041
-                side: left, vel: 20.256484, displacement: 0.881238768, dt: 0.049838
-                side: right, vel: 31.80206, displacement: 1.356678, dt: 0.050508
-                side: left, vel: 19.52439, displacement: 0.35594864, dt: 0.050141
-                side: right, vel: 31.725656, displacement: 0.51120732, dt: 0.049666
-                side: left, vel: 20.054568, displacement: 1.3371749, dt: 0.050345
-                side: right, vel: 31.851232, displacement: 2.0721264, dt: 0.050426
-                side: left, vel: 19.760518, displacement: 0.478654632, dt: 0.050318
-                side: right, vel: 31.638618, displacement: 0.6852268, dt: 0.050769
-                side: left, vel: 19.710248, displacement: 1.0715427, dt: 0.049675
-                side: right, vel: 31.061068, displacement: 1.6119697, dt: 0.049272
-                side: left, vel: 19.761696, displacement: 1.7429434, dt: 0.050323
-                side: right, vel: 31.592352, displacement: 2.6855712, dt: 0.050335
-                side: left, vel: 19.771124, displacement: 0.7562446, dt: 0.050295
-                side: right, vel: 30.544614, displacement: 1.1676656, dt: 0.050082
-                side: left, vel: 19.70486, displacement: 1.2115972, dt: 0.048895
-                side: right, vel: 31.02566, displacement: 1.88339468, dt: 0.048811
-                side: left, vel: 19.847658, displacement: 1.7093742, dt: 0.050096
-                side: right, vel: 30.962062, displacement: 2.6645854, dt: 0.050397
-                side: left, vel: 20.019028, displacement: 0.71535256, dt: 0.049676
-                side: right, vel: 31.047126, displacement: 1.1200281, dt: 0.049771
-                side: left, vel: 19.96221, displacement: 1.2721438, dt: 0.050582
-                side: right, vel: 31.052612, displacement: 1.98038532, dt: 0.050245
-                side: left, vel: 20.11986, displacement: 1.68902492, dt: 0.049432
-                side: right, vel: 30.773112, displacement: 2.6215864, dt: 0.04971
-                side: left, vel: 19.896492, displacement: 0.70246492, dt: 0.049954
-                side: right, vel: 30.930934, displacement: 1.0879798, dt: 0.049951
-                side: left, vel: 20.27709, displacement: 1.343636, dt: 0.050545
-                side: right, vel: 31.217814, displacement: 2.064087, dt: 0.049981
-                side: left, vel: 20.080082, displacement: 1.6810106, dt: 0.050281
-                side: right, vel: 30.710468, displacement: 2.5854856, dt: 0.050809
-                side: left, vel: 20.233756, displacement: 0.6749549, dt: 0.049917
-                side: right, vel: 30.736026, displacement: 1.0615567, dt: 0.049776
-                side: left, vel: 20.163872, displacement: 1.2798917, dt: 0.050055
-                side: right, vel: 31.077342, displacement: 1.9969822, dt: 0.05022
-                side: left, vel: 20.347516, displacement: 1.71314, dt: 0.050376
-                side: right, vel: 30.687334, displacement: 2.6433344, dt: 0.049832
-                side: left, vel: 20.386508, displacement: 0.712286, dt: 0.049526
-                side: right, vel: 30.805946, displacement: 1.1269792, dt: 0.049656
-                side: left, vel: 20.370472, displacement: 1.007712, dt: 0.049553
-                side: right, vel: 30.799744, displacement: 1.5746851, dt: 0.049667
-                side: left, vel: 19.950068, displacement: 1.8198828, dt: 0.054448
-                side: right, vel: 29.956132, displacement: 2.7987066, dt: 0.054649
-                side: left, vel: 19.841654, displacement: 1.00492, dt: 0.046255
-                side: right, vel: 30.010874, displacement: 1.5762135, dt: 0.045874
-                side: left, vel: 20.005742, displacement: 0.8330561, dt: 0.049716
-                side: right, vel: 30.251244, displacement: 1.3143886, dt: 0.050088
-                side: left, vel: 20.208652, displacement: 1.83385032, dt: 0.049948
-                side: right, vel: 30.1387, displacement: 2.8150172, dt: 0.050218
-                side: left, vel: 19.979222, displacement: 1.3595747, dt: 0.049766
-                side: right, vel: 30.223292, displacement: 2.0999422, dt: 0.049601
-                side: left, vel: 20.208652, displacement: 0.7038671, dt: 0.049961
-                side: right, vel: 30.13583, displacement: 1.1263366, dt: 0.049746
-                side: left, vel: 20.640968, displacement: 1.6609366, dt: 0.050398
-                side: right, vel: 30.2709, displacement: 2.5339044, dt: 0.050541
-
-                '''
 
                 # Check if past centerpoint, if so reverse offset (curve in other dir)
-                if displacement >= self.LANE_DISTANCE / 2 and not passed_center:
+                if -displacement >= self.LANE_DISTANCE / 2 and not passed_center:
                     dir *= -1
                     passed_center = True
                 # Check if total line distance travelled, if so finish lane change
