@@ -20,7 +20,6 @@ class TaskImu:
 
     def run(self):
         while True:
-
             if self.state == self.S0_IDLE:
                 #when the colection is dissabled there are no valid measurements
                 self.sensor_data.value["imu"] = None

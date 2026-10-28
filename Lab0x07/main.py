@@ -224,8 +224,10 @@ def main():
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
     sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
     lane_change_flag = Share (False, bool) #start or stop lane change
+    lane_chane_dir = Share("left", str)
 
     sensor_data.value["line"] = None
+    sensor_data.value["imu"] = None
 
     #Create tasks
     left_motor = TaskMotor(
@@ -233,6 +235,8 @@ def main():
         encoder=left_encoder,           # Encoder object measuring the left wheel position
         test_flag=left_test_flag,       # Shared flag used to request/indicate a left-motor test
         line_follow_flag=line_follow_flag, # Flag for line following behavior
+        lane_change_flag=lane_change_flag, # Flag for lane change behavior
+        lane_change_dir=lane_chane_dir,
         next_effort=next_effort,        #Shared velocity setpoint (rad/s)
         next_kp=next_kp,                #Gain selected for next test
         data=left_data,                 #left motor shared response motors
@@ -250,6 +254,8 @@ def main():
         encoder=right_encoder,          # Encoder object measuring the right wheel position
         test_flag=right_test_flag,      # Shared flag used to request/indicate a right-motor test
         line_follow_flag=line_follow_flag, # Flag for line following behavior
+        lane_change_flag=lane_change_flag, # Flag for lane change behavior
+        lane_change_dir=lane_chane_dir,
         next_effort=next_effort,        # Shared velocity setpoint (rad/s)
         next_kp=next_kp,                # Gain selected for next test-PID instance
         data=right_data,                # Shared response buffers-right motor
@@ -268,6 +274,9 @@ def main():
         left_data=left_data,            # Reads left test samples for serial output
         line_follow_flag=line_follow_flag, # Flag for line following behavior
         sensor_flag=sensor_flag,        # Enables and dissables the line sensor
+        imu_flag=imu_flag,              # Enables and dissables the IMU
+        lane_change_flag=lane_change_flag, # Flag for lane change behavior
+        lane_change_dir=lane_chane_dir, #direction of lane change
         right_data=right_data,          # Reads right test samples for serial output
         next_effort=next_effort,        # Reads/updates velocity setpoint
         next_kp=next_kp,                # UI will update through gain entry
@@ -359,7 +368,7 @@ def main():
     finally:
         left_mot.disable()
         right_mot.disable()
-        #print(cotask.task_list.profile())
+        print(cotask.task_list.profile())
     
     
 

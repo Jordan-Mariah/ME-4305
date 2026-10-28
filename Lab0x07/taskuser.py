@@ -26,12 +26,15 @@ class TaskUser:
 
     #initialize at the begining of the task
     #****new
-    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
+    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, imu_flag: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
         self.line_follow_flag = line_follow_flag
+        self.lane_change_flag = lane_change_flag
+        self.lane_change_dir = lane_change_dir
         self.sensor_flag = sensor_flag #added this sensor flag 
+        self.imu_flag = imu_flag
         self.left_data = left_data
         self.right_data = right_data
         self.next_effort = next_effort
@@ -193,7 +196,8 @@ class TaskUser:
 
                 elif low_char == "d":
                     if self.line_follow_flag.value:
-                        self.depart_flag.set(True)
+                        self.lane_change_flag.set(True)
+                        self.imu_flag.set(True)
                         self.state = self.S0_AWAIT_COMMAND
                     else:
                         self.state = self.S0_AWAIT_COMMAND

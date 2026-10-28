@@ -35,7 +35,7 @@ class TaskMotor:
     3) Inititializing timers for motor 
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
-    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_direction: Share, name: str,
+    def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, name: str,
                  battery_voltage=None, counts_per_revolution=None,
                  driver_sign=None, encoder_sign=None, next_kp=None, period_ms=100):
         #Pull args
@@ -48,7 +48,7 @@ class TaskMotor:
         self.data_to_user = data.value #from the the dictionary allocated in main.py.
         self.sensor_data = sensor_data # Dictionary of different sensor outputs
         self.lane_change_flag = lane_change_flag
-        self.lane_change_direction = lane_change_direction
+        self.lane_change_dir = lane_change_dir
         self.side = name
         #config based on voltage encoder scale, and wheel sign
         self.battery_voltage = battery_voltage
@@ -85,7 +85,7 @@ class TaskMotor:
 
                 if self.lane_change_flag.value == True:
                     self.motor_startup()
-                    dir = 1 if self.lane_change_direction == "left" else -1
+                    dir = 1 if self.lane_change_dir.value == "left" else -1
 
                     self.sample_start = ticks_us()
                     passed_center = False
@@ -93,11 +93,11 @@ class TaskMotor:
 
                     self.state = self.S7_MERGE_LANE
 
-                if self.line_follow_flag.value == True:
+                if self.line_follow_flag.value == True and not self.lane_change_flag.value:
                     self.motor_startup()
 
                     self.sample_start = ticks_us()
-                    record_data = True
+                    record_data = False
 
                     self.state = self.S6_FOLLOW_LINE
 
@@ -283,12 +283,19 @@ class TaskMotor:
                     target_velocity += target_velocity * self.MAX_TURN_RATIO * dir
                 elif self.side == "left":
                     target_velocity += target_velocity * self.MAX_TURN_RATIO * -dir
+                    
+                current_velocity_cm = self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution * 3.5
+                current_velocity = self.encoder_sign * self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution
+                
+                # Set next motor voltage
+                pid_out = self.pid.next_output(target_velocity, current_velocity) 
+                Vsat = max(-self.battery_voltage, min(self.battery_voltage, pid_out))
+                self.motor.set_effort(self.driver_sign * 100 * Vsat / self.battery_voltage)
 
-                omega: float = self.sensor_data["imu"](1)
-                current_velocity = self.encoder.get_velocity() * 2 * pi /self.counts_per_revolution * 3.5
+                omega: float = self.sensor_data.value["imu"][1]
 
-                # Re-calculate time to dir switch or mode change if current curve radius is sufficiently different from last
-                if abs(turn_radius - current_velocity/omega) >= 3:
+                # Re-calculate time to dir switch or mode change if current curve radius is sufficiently different from last TODO fix
+                if abs(not turn_radius == 0 and not current_velocity == 0 and not omega == 0 and turn_radius - current_velocity/omega) >= 3:
                     turn_radius = current_velocity/omega
                     arc_length = turn_radius * acos( (turn_radius - .5*self.LANE_DISTANCE) / turn_radius)
                     switch_time = arc_length / current_velocity
