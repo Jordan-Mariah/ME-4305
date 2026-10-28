@@ -72,6 +72,7 @@ class TaskUser:
         print("| r/R | Right motor step respoinse and print results                           |")
         print("| f/F | Start line following                                                   |")
         print("| s/S | Stop line following                                                    |")
+        print("| d/D | Depart from line                                                       |")
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
         print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
@@ -190,8 +191,12 @@ class TaskUser:
                         self.entry_invalid = False
                         self.state = self.S2_AWAIT_DIGIT_INPUT#clear invalid flag, numeric text, and wait for num now
 
-                else:
-                    self.state = self.S0_AWAIT_COMMAND
+                elif low_char == "d":
+                    if self.line_follow_flag.value:
+                        self.depart_flag.set(True)
+                        self.state = self.S0_AWAIT_COMMAND
+                    else:
+                        self.state = self.S0_AWAIT_COMMAND
 
                 self.new_char = ""
 
