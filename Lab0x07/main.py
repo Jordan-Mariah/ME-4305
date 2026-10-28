@@ -38,6 +38,9 @@ MOTOR_PERIOD_MS = 50
 UI_PERIOD_MS = 0
 SENSOR_PERIOD_MS = 50
 
+#lane changing
+LANE_DIRRECTION = 1 #where 1 is lef tand -1 is right
+
 #dictionary for necessary IMU configuration
 IMU_CONFIG = {
     "sensor": "BNO055",
@@ -220,6 +223,7 @@ def main():
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
     sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
+    lane_change_flag = Share (False, bool) #start or stop lane change
 
     sensor_data.value["line"] = None
 
