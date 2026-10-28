@@ -82,13 +82,6 @@ class TaskMotor:
                 if self.test_flag.value == True:
                     # Mark the task active and let its next scheduled turn prepare the motor.
                     self.state = self.S1_PREPARE
-                if self.line_follow_flag.value == True:
-                    self.motor_startup()
-
-                    self.sample_start = ticks_us()
-                    record_data = True
-
-                    self.state = self.S6_FOLLOW_LINE
 
                 if self.lane_change_flag.value == True:
                     self.motor_startup()
@@ -98,6 +91,14 @@ class TaskMotor:
                     passed_center = False
 
                     self.state = self.S7_MERGE_LANE
+
+                if self.line_follow_flag.value == True:
+                    self.motor_startup()
+
+                    self.sample_start = ticks_us()
+                    record_data = True
+
+                    self.state = self.S6_FOLLOW_LINE
 
             #inidcates the starting state of the FSM
             elif (self.state == self.S1_PREPARE): 
@@ -226,6 +227,10 @@ class TaskMotor:
 
             elif self.state == self.S6_FOLLOW_LINE:
                 self.encoder.update()
+
+                # Lane changing behavior overrides line follow. Idle state should switch to lane change
+                if self.lane_change_flag.value == True:
+                    self.state = self.S0_IDLE
 
                 # Get share data, set velocity and sensor data
                 line_position: float = self.sensor_data.value["line"] if not self.sensor_data.value["line"] == None else 0
