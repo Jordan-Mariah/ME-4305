@@ -228,7 +228,7 @@ class TaskMotor:
                     continue
 
                 #if the line is detected set the line following and lane change flag false
-                if self.following_target.value and self.sensor_data.value["all_black"]:
+                if self.following_target and self.sensor_data.value["all_black"]:
                     self.motor.disable() #turn off
                     self.line_follow_flag.set(False)
                     self.lane_change_flag.set(False)

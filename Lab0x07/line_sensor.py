@@ -180,8 +180,9 @@ class LineSensor:
         None: zero total weight, so position is undefined.
         """
         weights = self.read_weights()
-        self.all_black = all(weight >= self.BLACK_THRESHOLD for weight in weights)
 
+        #object classification attributes telling us what the sensor reads
+        self.all_black = all(weight >= self.BLACK_THRESHOLD for weight in weights)
         self.white_background = all(weight <= self.WHITE_THRESHOLD for weight in weights)
         self.line_detected = not self.all_black and any(weight >= self.LINE_THRESHOLD for weight in weights)
 

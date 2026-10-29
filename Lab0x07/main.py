@@ -34,7 +34,7 @@ RIGHT_ENCODER_SIGN = -1
 # Initial P gain in V/(rad/s) -tunned in testing
 INITIAL_KP = 0.1
 # Keep timing in firmware configuration
-MOTOR_PERIOD_MS = 50
+MOTOR_PERIOD_MS = 30
 UI_PERIOD_MS = 0
 SENSOR_PERIOD_MS = 50
 
@@ -227,6 +227,7 @@ def main():
     lane_chane_dir = Share("left", str)
     following_target = Share(False, bool)
 
+    #new sensor dictionary values for line stop
     sensor_data.value["line"] = None
     sensor_data.value["all_black"] = False
     sensor_data.value["imu"] = None
