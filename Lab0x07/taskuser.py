@@ -73,9 +73,10 @@ class TaskUser:
         print("| b/B | Equal out velocity of both motors                                      |")
         print("| l/L | Left motor step response and printed results                           |")
         print("| r/R | Right motor step respoinse and print results                           |")
-        print("| f/F | Start line following                                                   |")
+        print("| w/W | Start line following                                                   |")
         print("| s/S | Stop line following                                                    |")
-        print("| d/D | Depart from line                                                       |")
+        print("| d/D | Merge right                                                            |")
+        print("| a/A | Merge left                                                             |")
         print("| e/E | Exit interface                                                         |")
         print("+-----+------------------------------------------------------------------------+")
         print("Validation: signed decimal velocity +/-1000 rad/s; Kp 0.1000; max 24 characters.")
@@ -130,7 +131,7 @@ class TaskUser:
                     self.state = self.S0_AWAIT_COMMAND
 
                 #start the line following here
-                elif low_char == "f":
+                elif low_char == "w":
                     self.sensor_flag.set(True)
                     self.line_follow_flag.set(True)
                     self.state = self.S0_AWAIT_COMMAND
@@ -198,6 +199,16 @@ class TaskUser:
                     if self.line_follow_flag.value:
                         self.lane_change_flag.set(True)
                         self.imu_flag.set(True)
+                        self.lane_change_dir.value = "right"
+                        self.state = self.S0_AWAIT_COMMAND
+                    else:
+                        self.state = self.S0_AWAIT_COMMAND
+
+                elif low_char == "a":
+                    if self.line_follow_flag.value:
+                        self.lane_change_flag.set(True)
+                        self.imu_flag.set(True)
+                        self.lane_change_dir.value = "left"
                         self.state = self.S0_AWAIT_COMMAND
                     else:
                         self.state = self.S0_AWAIT_COMMAND

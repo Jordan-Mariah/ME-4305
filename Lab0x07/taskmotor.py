@@ -275,6 +275,7 @@ class TaskMotor:
                     last_time = ticks_us()
                     displacement: float = 0.0
                     theta_ref: float = self.sensor_data.value["imu"][0]
+                    init_dir = self.lane_change_dir.value
                     
                     # If we are starting with a lane change, init the motor
                     if self.line_follow_flag == False:
@@ -310,8 +311,9 @@ class TaskMotor:
 
 
                 # Check if past centerpoint, if so reverse offset (curve in other dir)
-                if -displacement >= self.LANE_DISTANCE / 2 and not passed_center:
+                if (-displacement * dir >= self.LANE_DISTANCE / 2 or not self.lane_change_dir.value == init_dir) and not passed_center:
                     dir *= -1
+                    self.lane_change_dir.value = "right" if self.lane_change_dir == "left" else "left"
                     passed_center = True
                 # Check if total line distance travelled, if so finish lane change
                 elif abs(theta) <= 10 and passed_center:
