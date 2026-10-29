@@ -5,7 +5,7 @@ from tshare import Share
 
 # Define constants
 
-SAMPLE_PER = 50
+SAMPLE_PER = 50_000
 
 # States
 S0_IDLE = 0
@@ -40,6 +40,10 @@ class TaskSensor():
                     # Period elapsed, collect and export data
 
                     line_data = self.line_sensor.read_centroid()
+                    self.sensor_data.value["all_black"] = self.line_sensor.all_black
+                    self.sensor_data.value["white_background"] = self.line_sensor.white_background
+                    self.sensor_data.value["line_detected"] = self.line_sensor.line_detected
+                    self.sensor_data.value["sensor_time_us"] = ticks_us()
                     self.sensor_data.value["line"] = line_data
 
                     sample_next = ticks_add(ticks_us(), SAMPLE_PER)

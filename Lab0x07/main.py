@@ -225,9 +225,14 @@ def main():
     sensor_data = Share({}, dict) # A dictionary for the last captured sensor data i.e sensor_data["line"]
     lane_change_flag = Share (False, bool) #start or stop lane change
     lane_chane_dir = Share("left", str)
+    following_target = Share(False, bool)
 
     sensor_data.value["line"] = None
+    sensor_data.value["all_black"] = False
     sensor_data.value["imu"] = None
+    sensor_data.value["white_background"] = False
+    sensor_data.value["line_detected"] = False
+    sensor_data.value["sensor_time_us"] = None
 
     #Create tasks
     left_motor = TaskMotor(
@@ -247,6 +252,7 @@ def main():
         driver_sign=LEFT_DRIVER_SIGN,
         encoder_sign=LEFT_ENCODER_SIGN,
         period_ms=MOTOR_PERIOD_MS, # set motor task to scheduling period.
+        following_target=following_target,
     )
 
     right_motor = TaskMotor(
@@ -266,6 +272,7 @@ def main():
         driver_sign=RIGHT_DRIVER_SIGN,
         encoder_sign=RIGHT_ENCODER_SIGN,
         period_ms=MOTOR_PERIOD_MS, #* Match the motor task configuration to scheduling.
+        following_target=following_target,
     )
 
     task_user = TaskUser(
@@ -285,6 +292,7 @@ def main():
         motor_period_ms=MOTOR_PERIOD_MS,
         ui_period_ms=UI_PERIOD_MS,
         battery_voltage=BATTERY_VOLTAGE,
+        following_target=following_target,
     )
 
     task_sensor = TaskSensor(

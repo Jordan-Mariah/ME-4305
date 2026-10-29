@@ -33,7 +33,10 @@ CALIBRATION_PATH = "line_sensor.json"
 
 class LineSensor:
     CHANNEL_COUNT = 13
-
+    BLACK_THRESHOLD = 0.8
+    WHITE_THRESHOLD = 0.2
+    LINE_THRESHOLD = 0.5
+    
     def __init__(
         self,
         pins,
@@ -85,6 +88,7 @@ class LineSensor:
         self.sample_count = sample_count
         self.sample_rate_hz = sample_rate_hz
         self.min_span = min_span
+        self.all_black = False
 
         self.adcs = tuple(ADC(pin) for pin in pins)
 
@@ -176,6 +180,13 @@ class LineSensor:
         None: zero total weight, so position is undefined.
         """
         weights = self.read_weights()
+        self.all_black = all(weight >= self.BLACK_THRESHOLD for weight in weights)
+
+        self.white_background = all(weight <= self.WHITE_THRESHOLD for weight in weights)
+        self.line_detected = not self.all_black and any(weight >= self.LINE_THRESHOLD for weight in weights)
+
+        if not self.line_detected:
+            return None
 
         if self.total_weight == 0.0:
             return None

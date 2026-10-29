@@ -37,7 +37,7 @@ class TaskMotor:
     5)calling the Motor class for left or right motor '''
     def __init__(self, motor: Motor, encoder: Encoder, test_flag: Share, next_effort: Share, data: Share, sensor_data: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, name: str,
                  battery_voltage, counts_per_revolution,
-                 driver_sign, encoder_sign, next_kp, period_ms=100):
+                 driver_sign, encoder_sign, following_target: Share, next_kp, period_ms=100):
         #Pull args
         self.motor = motor
         self.encoder = encoder
@@ -55,6 +55,7 @@ class TaskMotor:
         self.counts_per_revolution: float = counts_per_revolution
         self.driver_sign = driver_sign
         self.encoder_sign = encoder_sign
+        self.following_target = following_target
         #same period for scheduler execution and sample log
         if period_ms <= 0:
             raise ValueError("Motor period must be positive")
@@ -220,6 +221,21 @@ class TaskMotor:
                 self.state = self.S0_IDLE
 
             elif self.state == self.S6_FOLLOW_LINE:
+                if not self.line_follow_flag.value: #stop check here
+                    self.motor.disable()
+                    self.state = self.S0_IDLE
+                    yield self.state
+                    continue
+
+                #if the line is detected set the line following and lane change flag false
+                if self.following_target.value and self.sensor_data.value["all_black"]:
+                    self.motor.disable() #turn off
+                    self.line_follow_flag.set(False)
+                    self.lane_change_flag.set(False)
+                    self.state = self.S0_IDLE
+                    yield self.state
+                    continue
+
                 self.encoder.update()
 
                 # Lane changing behavior overrides line follow. Idle state should switch to lane change
@@ -267,6 +283,13 @@ class TaskMotor:
                     self.state = self.S0_IDLE
 
             elif self.state == self.S7_MERGE_LANE:
+                if not self.line_follow_flag.value: #if there is no line following flag turn off
+                    self.motor.disable()
+                    self.lane_change_flag.set(False) #set lane change false
+                    self.state = self.S0_IDLE #go back to initial state
+                    yield self.state
+                    continue
+
                 # Perform first run initialisation
                 if self.first_run == True:
                     dir = 1 if self.lane_change_dir.value == "left" else -1
@@ -318,6 +341,7 @@ class TaskMotor:
                     # If line follow behavior is after this, go stright there and do not reset motor.
                     # Note: Both motors act independantly, if one motor finishes and the other doesnt, bad things will happen.
                     if self.line_follow_flag.value:
+                        self.following_target.set(True)
                         self.state = self.S6_FOLLOW_LINE
                     else:
                         self.motor.disable()
