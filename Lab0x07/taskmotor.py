@@ -299,7 +299,7 @@ class TaskMotor:
                 # Lane changing logic
 
                 # Get the (linearized) displacement since last run and add to running total TODO: make this a trapazoidal sum
-                theta: float = (((-self.sensor_data.value["imu"][0] - theta_ref)+180)%360 - 180)
+                theta: float = ((self.sensor_data.value["imu"][0] - theta_ref) + 180) % 360 -180
                 velocity_cm = current_velocity * 3.5 # Convert rad/s to cm/s
                 dt = ticks_diff(ticks_us(), last_time) / 1_000_000 # convert us to s
                 last_time = ticks_us()
@@ -314,7 +314,7 @@ class TaskMotor:
                     dir *= -1
                     passed_center = True
                 # Check if total line distance travelled, if so finish lane change
-                elif displacement >= self.LANE_DISTANCE and passed_center:
+                elif abs(theta) <= 10 and passed_center:
                     # If line follow behavior is after this, go stright there and do not reset motor.
                     # Note: Both motors act independantly, if one motor finishes and the other doesnt, bad things will happen.
                     if self.line_follow_flag.value:
