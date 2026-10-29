@@ -25,7 +25,6 @@ class TaskUser:
     LINE_READY = "Ready for next line-follow run"
 
     #initialize at the begining of the task
-    #****new
     def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, imu_flag: Share, following_target: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
@@ -137,6 +136,7 @@ class TaskUser:
                 elif low_char == "w":
                     self.following_target.set(False)
                     self.sensor_flag.set(True)
+                    self.imu_flag.set(True)
                     self.line_follow_flag.set(True)
                     self.state = self.S0_AWAIT_COMMAND
 

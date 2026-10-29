@@ -40,6 +40,7 @@ class TaskSensor():
                     # Period elapsed, collect and export data
 
                     line_data = self.line_sensor.read_centroid()
+                    #copy the sensor attributes into shared dictionary
                     self.sensor_data.value["all_black"] = self.line_sensor.all_black
                     self.sensor_data.value["white_background"] = self.line_sensor.white_background
                     self.sensor_data.value["line_detected"] = self.line_sensor.line_detected
