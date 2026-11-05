@@ -44,8 +44,8 @@ SENSOR_PERIOD_MS = 50
 
 #PID parameters
 KP: float = 0.001
-KI: float = 0.0001
-KD: float = 0
+KI = None
+KD: float = 0.0
 KM: float = 0.7 # V / (rad/s)
 
 #lane changing
@@ -304,14 +304,22 @@ def main():
     )
 
     maneuver = TaskManeuver(
-        left_mode=left_mode, right_mode=right_mode,
-        left_target=left_target, right_target=right_target,
-        left_velocity=left_velocity, right_velocity=right_velocity,
-        left_position_cm=left_position_cm, right_position_cm=right_position_cm,
-        next_effort=next_effort, sensor_data=sensor_data,
-        line_follow_flag=line_follow_flag, lane_change_flag=lane_change_flag,
-        lane_change_dir=lane_chane_dir, following_target=following_target,
-        test_flags=test_flags, period_ms=MANEUV_PERIOD_MS,
+        left_mode=left_mode, 
+        right_mode=right_mode,
+        left_target=left_target, 
+        right_target=right_target,
+        left_velocity=left_velocity, 
+        right_velocity=right_velocity,
+        left_position_cm=left_position_cm, 
+        right_position_cm=right_position_cm,
+        next_effort=next_effort, 
+        sensor_data=sensor_data,
+        line_follow_flag=line_follow_flag, 
+        lane_change_flag=lane_change_flag,
+        lane_change_dir=lane_chane_dir, 
+        following_target=following_target,
+        test_flags=test_flags, 
+        period_ms=MANEUV_PERIOD_MS,
     )
 
     task_user = TaskUser(

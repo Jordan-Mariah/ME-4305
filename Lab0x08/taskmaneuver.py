@@ -18,10 +18,10 @@ class TaskManeuver:
 
     # Other task constants
     KP: float = 0.001
-    KI: float = 0.0001
+    KI: float = 0.00
     KD: float = 0
     KM: float = 0.7 # V / (rad/s)
-    MAX_TURN_RATIO: float = 0.2 # Max multiplier applied to target speed to stay on line
+    MAX_TURN_RATIO: float = 0.5 # Max multiplier applied to target speed to stay on line
     MERGE_TURN_RATIO: float = 0.2 # Multiplier applied to target speed when changing lanes
     LANE_DISTANCE: float = 20.0
 
