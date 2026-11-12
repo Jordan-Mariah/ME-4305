@@ -19,7 +19,7 @@ class TaskMotor:
     S5_TEST = 5
 
     # Other task constants
-    KP: float = 0.001
+    KP: float = 0.1
     KI: float = 0.0001
     KD: float = 0
     KM: float = 0.7 # V / (rad/s)

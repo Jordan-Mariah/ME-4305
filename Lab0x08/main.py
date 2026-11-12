@@ -44,7 +44,7 @@ SENSOR_PERIOD_MS = 50
 
 #PID parameters
 KP: float = 0.001
-KI = None
+KI = .0001
 KD: float = 0.0
 KM: float = 0.7 # V / (rad/s)
 
