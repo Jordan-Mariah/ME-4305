@@ -48,7 +48,7 @@ class BNO055:
 
     def heading(self):
         raw_heading = self._read_reg(BNO055.reg.EUL_HEADING)[0]
-        return raw_heading / 16
+        return raw_heading / 16 #convert heading to degrees
 
     def initialize(self):
         #wait until IMU started up
@@ -65,7 +65,7 @@ class BNO055:
         self._write_reg(BNO055.reg.UNIT_SEL, 0x00)
 
         # Preserve the default sensor-axis mapping
-        self._write_reg(BNO055.reg.AXIS_MAP_CONFIG, 0x24) #TODO: confirm that sensor Z is vertical before using gyro z as yaw
+        self._write_reg(BNO055.reg.AXIS_MAP_CONFIG, 0x24) # confirm that sensor Z is vertical before using gyro z as yaw
         self._write_reg(BNO055.reg.AXIS_MAP_SIGN, 0x00)
 
         # Start the IMU fusion mode for the  accelerometer + gyroscope
@@ -115,7 +115,7 @@ class BNO055:
         head, roll, pitch = self._read_reg(BNO055.reg.EUL_DATA_ALL)
         return (head / 16, roll / 16, pitch / 16)
 
-    #get gyro Z (yaw rate) in dps
+    #get gyro Z (yaw rate) in degrees/s
     def read_gyro_z(self):
         #may need to iniitialize with the gyroscope config. zero register
         #returns a tuple containing integer value of signed 16 bit value

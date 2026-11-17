@@ -1,0 +1,78 @@
+TERMINAL COMMANDS: GITHUB AND MICROPYTHON REPL
+
+1) PUSH A TEXT FILE OR FOLDER TO YOUR ME-4305 GITHUB REPOSITORY
+
+Run these commands in PowerShell. First go to your local repository:
+
+cd "C:\Users\jorda\Documents\Romi Robot\Project Design\ME-4305"
+
+If the file or folder is elsewhere on your computer, copy it into Lab0x07:
+
+Copy-Item -LiteralPath "C:\path\to\your_file.txt" -Destination ".\Lab0x07\"
+Copy-Item -LiteralPath "C:\path\to\your_folder" -Destination ".\Lab0x07\" -Recurse
+
+Replace the example paths and names with your actual file and folder.
+Skip the copy commands if the items are already in Lab0x07.
+
+Stage both the text file and the folder, then commit and push:
+
+git add -- "Lab0x07/your_file.txt" "Lab0x07/your_folder/"
+git commit -m "Add Lab0x07 text file and folder"
+git push
+
+To upload just one item, include only its path in git add.
+Git does not track empty folders; the folder must contain a file.
+These commands assume the repository already has its GitHub remote and
+the current branch has an upstream configured. Check changes first with:
+
+git status
+
+2) CONNECT TO THE MICROPYTHON REPL
+
+REPL means Read-Evaluate-Print Loop: it is an interactive prompt that lets
+you run Python commands directly on the microcontroller.
+
+Connect the microcontroller to your computer with a USB data cable.
+Close any other serial terminal using the board's port.
+
+Option A: Thonny
+- Select the appropriate MicroPython interpreter and the board's serial
+  port under Tools > Options > Interpreter.
+- Open the Shell and press Ctrl+C to stop the running program.
+- The >>> prompt means the REPL is ready for commands.
+
+Option B: PowerShell with mpremote
+Install mpremote once:
+
+py -m pip install mpremote
+
+List connected serial ports:
+
+mpremote connect list
+
+Connect, replacing COM5 with your board's actual port:
+
+mpremote connect COM5 repl
+
+Press Ctrl+C to interrupt the running program and reach >>>.
+Press Ctrl+] to exit mpremote's terminal.
+
+READ THE SAVED IMU CALIBRATION
+
+At the >>> prompt, enter these commands one at a time:
+
+import os
+print(os.listdir())
+print(open("imu_calibration.json").read())
+
+Copy the printed JSON into a local file named imu_calibration.json.
+If the file is missing, confirm calibration finished and printed
+"saved IMU calibration".
+
+Alternatively, download the file directly from PowerShell after closing
+the REPL connection. Run from your local Lab0x07 folder:
+
+mpremote connect COM5 fs cp :imu_calibration.json ./imu_calibration.json
+
+The colon marks a path on the microcontroller. Keep the original file on
+the board so the program can restore its calibration at startup.

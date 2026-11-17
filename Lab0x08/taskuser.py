@@ -126,7 +126,7 @@ class TaskUser:
                 #here stop the line following, but keep going in the program
                 elif low_char == "s": 
                     #motor tests and line following -stop
-                    self.left_test_flag.set(False)
+                    self.left_test_flag.set(False) #from refactoring we now have a left and right test flag
                     self.right_test_flag.set(False)
                     self.line_follow_flag.set(False)
                     self.lane_change_flag.set(False)

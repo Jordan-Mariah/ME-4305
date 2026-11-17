@@ -20,7 +20,7 @@ class TaskUser:
     TERMINATORS: set = {"\r", "\n"}
 
     LINE_HEADER = "Begin motor-test data"
-    LINE_COLUMNS = "time_us,velocity_rad_s"
+    LINE_COLUMNS = "time_us,setpoint_rad_s,velocity_rad_s,voltage_V"
     LINE_FOOTER = "End of motor-test data"
     LINE_READY = "Ready for next motor test"
 
@@ -320,9 +320,11 @@ class TaskUser:
                         line = self.LINE_FOOTER
                         self.export_phase = "finished"
                     else:
-                        line = "{},{}".format(
-                            time_us, #data exported in terms fo rad/s
+                        line = "{},{},{},{}".format(
+                            time_us,
+                            data["setpoint_rad_s"][i],
                             data["velocity_rad_s"][i],
+                            data["voltage_V"][i],
                         )
                         self.export_index += 1
 

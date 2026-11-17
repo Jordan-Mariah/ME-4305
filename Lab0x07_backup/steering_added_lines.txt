@@ -1,0 +1,90 @@
+main.py
+225:     sensor_data.value["left_velocity"] = 0.0
+226:     sensor_data.value["right_velocity"] = 0.0
+232:         run_flag=line_follow_flag,
+233:         sensor_data=sensor_data
+
+taskmotor.py
+38:                  driver_sign=None, encoder_sign=None, wheel_requests=None, next_kp=None, period_ms=100):
+54:         self.wheel_requests = wheel_requests
+236:                 self.sensor_data.value[self.side + "_velocity"] = current_velocity
+
+tasksteering.py
+1: from math import pi, isfinite
+2: from time import ticks_ms, ticks_diff
+12: FOLLOW_LINE = 0
+13: DEPART = 1
+14: TURN_BACK = 2
+15: FOLLOW_TARGET = 3
+16: DEPARTURE_DELAY_MS = 2000
+17: LANE_SPACING_M = 0.10
+18: LANE_DIRECTION = 1
+19: MANEUVER_TIMEOUT_MS = 10000
+20: LINE_TURN_RATIO = 0.2
+21: 
+23:     def __init__(self, imu, wheel_requests, run_flag, sensor_data):
+27:         self.sensor_data = sensor_data
+28:         self.state = FOLLOW_LINE
+29:         self.started = False
+30:         self.cleared_line = False
+31:         self.lateral_position = 0.0
+32:         if (not isfinite(WHEEL_RADIUS_M) or WHEEL_RADIUS_M <= 0
+33:                 or not isfinite(FORWARD_SPEED_M_S)
+34:                 or not isfinite(MAX_WHEEL_RAD_S) or MAX_WHEEL_RAD_S <= 0
+35:                 or abs(FORWARD_SPEED_M_S / WHEEL_RADIUS_M) > MAX_WHEEL_RAD_S):
+36:             raise ValueError("Invalid forward speed or wheel-speed limit")
+40:             now = ticks_ms()
+41:             if not self.run_flag.value:
+42:                 self.wheel_requests.set((0.0, 0.0))
+43:                 self.started = False
+44:                 yield
+45:                 continue
+46: 
+47:             if not self.started:
+48:                 self.started = True
+49:                 self.state = FOLLOW_LINE
+50:                 self.run_start = now
+51:                 self.previous_time = now
+52:                 self.cleared_line = False
+53:                 self.lateral_position = 0.0
+54: 
+55:             dt = ticks_diff(now, self.previous_time) / 1000
+56:             self.previous_time = now
+57:             line_position = self.sensor_data.value["line"]
+58: 
+59:             if self.state == FOLLOW_LINE and ticks_diff(now, self.run_start) >= DEPARTURE_DELAY_MS:
+60:                 self.state = DEPART
+61:                 self.maneuver_start = now
+62:                 self.heading_start = GYRO_SIGN * self.imu.heading() * pi / 180
+63: 
+64:             if self.state in (DEPART, TURN_BACK):
+65:                 heading = GYRO_SIGN * self.imu.heading() * pi / 180
+66:                 psi = (heading - self.heading_start + pi) % (2 * pi) - pi
+67:                 speed = WHEEL_RADIUS_M * (
+68:                     self.sensor_data.value["left_velocity"]
+69:                     + self.sensor_data.value["right_velocity"]
+70:                 ) / 2
+71:                 self.lateral_position += speed * psi * dt
+72:                 if line_position is None:
+73:                     self.cleared_line = True
+74:                 if self.state == DEPART and LANE_DIRECTION * self.lateral_position >= LANE_SPACING_M / 2:
+75:                     self.state = TURN_BACK
+76:                 if self.state == TURN_BACK and self.cleared_line and line_position is not None:
+77:                     self.state = FOLLOW_TARGET
+78:                 if ticks_diff(now, self.maneuver_start) >= MANEUVER_TIMEOUT_MS:
+79:                     self.run_flag.set(False)
+80:                     self.wheel_requests.set((0.0, 0.0))
+81:                     yield
+82:                     continue
+83: 
+84:             if self.state in (FOLLOW_LINE, FOLLOW_TARGET):
+85:                 angular_v = FORWARD_SPEED_M_S / WHEEL_RADIUS_M
+86:                 position = line_position if line_position is not None else 0.0
+87:                 correction = angular_v * LINE_TURN_RATIO * position / 25
+88:                 limit = MAX_WHEEL_RAD_S - abs(angular_v)
+89:                 correction = max(-limit, min(limit, correction))
+90:                 requests = (angular_v - correction, angular_v + correction)
+92:                 direction = LANE_DIRECTION if self.state == DEPART else -LANE_DIRECTION
+93:                 requests = yaw_wheel_requests(self.imu, direction * TURN_RATE_RAD_S)
+94: 
+95:             self.wheel_requests.set(requests)

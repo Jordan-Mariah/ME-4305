@@ -283,7 +283,7 @@ class TaskMotor:
                     self.state = self.S0_IDLE
 
             elif self.state == self.S7_MERGE_LANE:
-                if not self.line_follow_flag.value: #if there is no line following flag turn off
+                if not self.line_follow_flag.value: #is the stored line follow flag false
                     self.motor.disable()
                     self.lane_change_flag.set(False) #set lane change false
                     self.state = self.S0_IDLE #go back to initial state
@@ -297,10 +297,10 @@ class TaskMotor:
                     last_disp: float = 0
                     last_time = ticks_us()
                     displacement: float = 0.0
-                    theta_ref: float = self.sensor_data.value["imu"][0]
+                    theta_ref: float = self.sensor_data.value["imu"][0] #layteral displacement if 0 at start of manuver
                     init_dir = self.lane_change_dir.value
                     
-                    # If we are starting with a lane change, init the motor
+                    # Not needed (take out)
                     if self.line_follow_flag == False:
                         self.motor_startup()
 
@@ -325,21 +325,21 @@ class TaskMotor:
                 # Get the (linearized) displacement since last run and add to running total TODO: make this a trapazoidal sum
                 theta: float = ((self.sensor_data.value["imu"][0] - theta_ref) + 180) % 360 -180
                 velocity_cm = current_velocity * 3.5 # Convert rad/s to cm/s
-                dt = ticks_diff(ticks_us(), last_time) / 1_000_000 # convert us to s
+                dt = ticks_diff(ticks_us(), last_time) / 1_000_000 # time from prev update in s
                 last_time = ticks_us()
-                this_disp = sin(radians(theta)) * velocity_cm * dt # this displacement in cm
+                this_disp = sin(radians(theta)) * velocity_cm * dt # sideways displacement in cm
 
                 displacement += this_disp
                 last_disp = this_disp
 
 
-                # Check if past centerpoint, if so reverse offset (curve in other dir)
+                # Check if past centerpoint, if so reverse offset (curve in other dir)- this is the turn back 
                 if (-displacement * dir >= self.LANE_DISTANCE / 2 or not self.lane_change_dir.value == init_dir) and not passed_center:
-                    dir *= -1
+                    dir *= -1 #or shared dirrection changed since motor began manuever
                     self.lane_change_dir.value = "right" if self.lane_change_dir == "left" else "left"
                     passed_center = True
                 # Check if total line distance travelled, if so finish lane change
-                elif abs(theta) <= 10 and passed_center:
+                elif abs(theta) <= 10 and passed_center: #heading less than 10 degrees
                     # If line follow behavior is after this, go stright there and do not reset motor.
                     # Note: Both motors act independantly, if one motor finishes and the other doesnt, bad things will happen.
                     if self.line_follow_flag.value:

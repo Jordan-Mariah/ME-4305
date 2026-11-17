@@ -174,12 +174,12 @@ class TaskMotor:
                 #first with a setpoint of 1-2 rad/s
                 #then with a setpoint of 10-15 rad/s
                 if not self.test_flag.value or self.mode.value == "stop":
-                    self.finish_test("cancelled")
+                    self.finish_test("cancelled") #mark the test as cancelled
 
                 else:
-                    self.motor.enable()
+                    self.motor.enable() #enable motor
                     self.encoder.zero()
-                    self.prepare_pid()
+                    self.prepare_pid() #set kp and reset the pid
                     self.test_start = ticks_us()
                     self.control_velocity(self.test_speed)
                     self.state = self.S8_TAKE_SAMPLES
@@ -190,32 +190,8 @@ class TaskMotor:
                 #record the time, setpoint existing feedback velocity, 
                 #and limitted voltage
                 #plot velocity with a setpoint against time
-                if self.mode.value == "stop":
-                    self.state = self.S4_STOP
-                else:
-                    data = self.data.value
-                    elapsed_time = ticks_diff(ticks_us(), self.test_start) #time for sample
-                    i = data["count"]
 
-                    if not self.test_flag.value or self.mode.value == "stop":
-                        self.finish_test("cancleled")
-
-                    elif elapsed_time >= self.test_duration_us:
-                        self.finish_test("completed")
-
-                    elif i >= len(data["time_us"]):
-                        self.finish_test("buffer_full")
-
-                    else:
-                        self.measured_vel = self.actual_velocity.value
-                        self.voltage = self.control_velocity(self.test_speed)
-                        data["time_us"][i] = elapsed_time
-                        data["setpoint_rad_s"][i] = self.test_speed
-                        data["velocity_rad_s"][i] = self.actual_velocity.value
-                        data["voltage_V"][i] =self.motor.get_voltage()
-                        data["count"] += 1
-
-            yield self.state
+                yield self.state
                 
     def control_velocity(self, target_rad_s):
 
