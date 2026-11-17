@@ -131,7 +131,7 @@ class TaskMotor:
                     self.state = self.S0_IDLE
 
                 else:
-                    #get the velocity in rad/s from cm/s
+                    #convert to rad/s from cm/s so that we can use the shared control_velocity func.
                     target_rad_s = self.target.value / self.wheel_radius_cm
                     self.control_velocity(target_rad_s)
                     
@@ -179,10 +179,10 @@ class TaskMotor:
         """update the encoder and get the measured and actual velocity and position"""
         #update encoder for each itteration of run
         self.encoder.update()
-        #measure velocity in rad/s
+        #measure velocity in rad/s and set actual velocity to be measured velocity
         measured_velocity = (self.encoder_sign * self.encoder.get_velocity()* 2 * pi / self.counts_per_revolution)
         self.actual_velocity.set(measured_velocity)
-        #get postion in cm
+        #get postion in cm and set position to be measured position
         measured_position = (self.encoder_sign * self.encoder.get_position() * 2 * pi / self.counts_per_revolution)
         self.position_cm.set(measured_position * self.wheel_radius_cm) #must use set to write into shares
 

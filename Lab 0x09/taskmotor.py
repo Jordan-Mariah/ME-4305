@@ -154,11 +154,18 @@ class TaskMotor:
                 #check that there is no stop value
                 #set test flag true
                 #move to settle state
-                pass
+                if self.mode.value == "stop":
+                    self.state = self.S4_STOP
+                else:
+                    self.test_flag.set(True)
+                    self.state = self.S6_SETTLE
+                    
 
             elif self.state == self.S6_SETTLE:
                 #update the encoder and start clock
-                pass
+                self.encoder.update()
+                self.settle_start = ticks_us()
+                self.state = self.S7_START_TEST
 
             elif self.state == self.S7_START_TEST:
                 self.prepare_pid()
@@ -211,6 +218,7 @@ class TaskMotor:
         #set motor effort based on duty cycle from calculated votage that attains desired velocity
         duty_percent = 100 * voltage / self.battery_voltage
         self.motor.set_effort(duty_percent * self.driver_sign)
+        return voltage
 
     def feedback(self):
         """update the encoder and get the measured and actual velocity and position"""
