@@ -17,7 +17,7 @@ class TaskMotor:
     S3_SET_CM_PER_SEC_CL = 3
     S4_STOP = 4
     S5_TEST = 5
-    S6_RESERVED = 6
+    S6_SETTLE = 6
     S7_START_TEST = 7
     S8_TAKE_SAMPLES = 8
     S9_STOP_MOTOR = 9
@@ -104,6 +104,7 @@ class TaskMotor:
                     self.motor.disable()
                     self.state = self.S4_STOP
                 elif self.mode.value == "test":
+                    self.state = self.S5_TEST
 
 
 
@@ -154,34 +155,65 @@ class TaskMotor:
                 #check that there is no stop value
                 #set test flag true
                 #move to settle state
-                pass
+                if self.mode.value == "stop":
+                    self.state = self.S4_STOP
+                else:
+                    self.test_flag.set(True)
+                    self.state = self.S6_SETTLE
+                    
 
             elif self.state == self.S6_SETTLE:
                 #update the encoder and start clock
-                pass
+                self.encoder.update()
+                self.settle_start = ticks_us()
+                self.state = self.S7_START_TEST
 
             elif self.state == self.S7_START_TEST:
                 #enable the motor, zero encoder, reset pid
                 #command same forward wheel speed for both wheels
                 #first with a setpoint of 1-2 rad/s
                 #then with a setpoint of 10-15 rad/s
-                pass
+                if not self.test_flag.value or self.mode.value == "stop":
+                    self.finish_test("cancelled")
+
+                else:
+                    self.motor.enable()
+                    self.encoder.zero()
+                    self.prepare_pid()
+                    self.test_start = ticks_us()
+                    self.control_velocity(self.test_speed)
+                    self.state = self.S8_TAKE_SAMPLES
+
 
             elif self.state == self.S8_TAKE_SAMPLES:
                 #take the samples at each setpoint 
                 #record the time, setpoint existing feedback velocity, 
                 #and limitted voltage
                 #plot velocity with a setpoint against time
-                pass
-            
-            elif self.state == self.S9_STOP_TEST:
-                # Power off motors and lower test_flag
-                self.motor.set_effort(0)
-                self.motor.disable()
+                if self.mode.value == "stop":
+                    self.state = self.S4_STOP
+                else:
+                    data = self.data.value
+                    elapsed_time = ticks_diff(ticks_us(), self.test_start) #time for sample
+                    i = data["count"]
 
-                self.test_flag.value = False
-                self.state = self.S0_IDLE
+                    if not self.test_flag.value or self.mode.value == "stop":
+                        self.finish_test("cancleled")
 
+                    elif elapsed_time >= self.test_duration_us:
+                        self.finish_test("completed")
+
+                    elif i >= len(data["time_us"]):
+                        self.finish_test("buffer_full")
+
+                    else:
+                        self.measured_vel = self.actual_velocity.value
+                        self.voltage = self.control_velocity(self.test_speed)
+                        data["time_us"][i] = elapsed_time
+                        data["setpoint_rad_s"][i] = self.test_speed
+                        data["velocity_rad_s"][i] = self.actual_velocity.value
+                        data["voltage_V"][i] =self.motor.get_voltage()
+                        data["count"] += 1
 
             yield self.state
                 
@@ -197,6 +229,7 @@ class TaskMotor:
         #set motor effort based on duty cycle from calculated votage that attains desired velocity
         duty_percent = 100 * voltage / self.battery_voltage
         self.motor.set_effort(duty_percent * self.driver_sign)
+        return voltage
 
     def feedback(self):
         """update the encoder and get the measured and actual velocity and position"""
@@ -226,7 +259,7 @@ class TaskMotor:
         self.prepare_pid()
         self.test_start = ticks_us()
         self.motor.enable()
-        self.state = self.S8_TEST
+        self.state = self.S8_TAKE_SAMPLES
         self.control_velocity(self.test_speed)
 
     def finish_test(self, status):

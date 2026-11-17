@@ -30,7 +30,7 @@ class TaskBaseline:
         self.surface = surface
         self.loading = loading
         self.battery_condition = battery_condition
-        capacity = duration_ms // period_ms + 3
+        capacity = duration_ms // period_ms + 3 #test len/ time between samples + buffer
         self.times = array("L", [0] * capacity)
         self.setpoints = array("f", [0.0] * capacity)
         self.velocities = array("f", [0.0] * capacity)
@@ -50,7 +50,8 @@ class TaskBaseline:
 
     def update_feedback(self):
         for i in range(2):
-            self.encoders[i].update()
+            self.encoders[i].update() #update the encoders (left and right)
+            # w = (counts/sec) * (2 * pi / counts per rev)
             self.feedback[i] = (self.encoder_signs[i] * self.encoders[i].get_velocity()
                                 * 2 * pi / self.counts_per_revolution)
 
@@ -58,7 +59,7 @@ class TaskBaseline:
         self.stop_motors()
         for pid in self.pids:
             pid.reset()
-        self.selected_motor = selected_motor
+        self.selected_motor = selected_motor #either the left or right motor
         self.count = 0
         self.settle_start = ticks_us()
         self.last_update = self.settle_start
@@ -76,6 +77,7 @@ class TaskBaseline:
 
     def record_step(self, elapsed):
         voltage = [0.0, 0.0]
+        #calculate and limit the voltages 
         for i in range(2):
             requested = self.pids[i].next_output(self.setpoint, self.feedback[i])
             voltage[i] = max(-self.voltage_limit, min(self.voltage_limit, requested))
@@ -83,6 +85,7 @@ class TaskBaseline:
             duty = 100 * voltage[i] / self.battery_voltage
             self.motors[i].set_effort(duty * self.driver_signs[i])
         selected = 0 if self.selected_motor == "left" else 1
+        #store times, setpoints, velocities, and voltages in arrays
         self.times[self.count] = elapsed
         self.setpoints[self.count] = self.setpoint
         self.velocities[self.count] = self.feedback[selected]
@@ -99,14 +102,17 @@ class TaskBaseline:
     def send_line(self, line):
         data = (line + "\r\n").encode()
         while data:
+            # send 128 byte pieces of data to the PC
             sent = self.serial.write(data[:128])
             if sent:
                 data = data[sent:]
 
     def export_data(self):
         selected = 0 if self.selected_motor == "left" else 1
+        # pid controller based on left or right motor
         pid = self.pids[selected]
-        metadata = {
+        #store the motor controlldata in a dictionary
+        data = {
             "motor": self.selected_motor, "mode": "P",
             "setpoint_rad_s": self.setpoint, "kp": pid.kp,
             "ki": pid.ki, "kd": pid.kd, "ff_gain": pid.ff_gain,
@@ -118,8 +124,8 @@ class TaskBaseline:
             "controller_period_ms": self.period_ms,
             "velocity_window": "encoder_update_interval",
             "nominal_velocity_window_ms": self.period_ms,
-            "voltage_min_V": -self.voltage_limit,
             "voltage_max_V": self.voltage_limit,
+            "voltage_min_V": -self.voltage_limit,
             "battery_voltage_V": self.battery_voltage,
             "duration_ms": self.duration_us // 1000,
             "surface": self.surface, "loading": self.loading,
@@ -131,16 +137,20 @@ class TaskBaseline:
             "derivative_implemented": False,
         }
         self.send_line("Begin data: " + ",".join(
-            "{}={}".format(key, value) for key, value in metadata.items()))
+            "{}={}".format(key, value) for key, value in data.items()))
+        #send the column names
         self.send_line("time_us,setpoint_rad_s,velocity_rad_s,limited_voltage_V")
         for i in range(self.count):
+            #send/format recoded samples (had help from ChatGPT here to figure out the formating)
             self.send_line("{},{},{},{}".format(
                 self.times[i], self.setpoints[i], self.velocities[i], self.voltages[i]))
         self.send_line("End of data: " + self.status)
         self.send_line("Ready for next test")
         self.state = "idle"
 
+    #The state machine is grouped into processing commands and running tests
     def process_command(self, char):
+
         if char.lower() in ("s", "e"):
             self.entry = ""
             self.finish()
@@ -161,11 +171,12 @@ class TaskBaseline:
             elif char.lower() in ("v", "p"):
                 self.entry = char.lower()
                 self.number = ""
-                self.send_line("Enter velocity setpoint [rad/s]:" if self.entry == "v"
-                               else "Enter Kp [V/(rad/s)]:")
+                self.send_line("Enter setpoint for velocity (rad/s):" if self.entry == "v"
+                               else "Enter setpoint for Kp (V/(rad/s)):")
             elif char.lower() in ("l", "r", "b"):
                 self.start("right" if char.lower() == "r" else "left")
 
+    #run settle and export data
     def run(self):
         while not self.exit_initiated:
             for flag in self.disable_flags:
