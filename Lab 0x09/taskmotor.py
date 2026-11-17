@@ -17,10 +17,10 @@ class TaskMotor:
     S3_SET_CM_PER_SEC_CL = 3
     S4_STOP = 4
     S5_TEST = 5
-    S6_RESERVED = 6
+    S6_SETTLE = 6
     S7_START_TEST = 7
     S8_TAKE_SAMPLES = 8
-    S9_STOP_MOTOR = 9
+    S9_STOP_TEST = 9
 
 
     # Other task constants
@@ -38,7 +38,7 @@ class TaskMotor:
     3) Inititializing timers for motor 
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
-    def __init__(self, motor,encoder, pid, mode: Share, target: Share, actual_velocity: Share, position_cm: Share, test_flag: Share,
+    def __init__(self, motor: Motor,encoder: Encoder, pid: PID, mode: Share, target: Share, actual_velocity: Share, position_cm: Share, test_flag: Share,
                  next_kp: Share, data:Share, name: str, battery_voltage, counts_per_revolution, wheel_radius_cm, driver_sign, encoder_sign, period_ms=100, test_target=None, test_duration_ms=2000, test_flags=()):
         #Pull args
         self.test_target = test_target
@@ -104,7 +104,7 @@ class TaskMotor:
                     self.motor.disable()
                     self.state = self.S4_STOP
                 elif self.mode.value == "test":
-
+                    self.state = self.S5_TEST
 
 
             elif (self.state == self.S1_DUTY):
@@ -161,19 +161,33 @@ class TaskMotor:
                 pass
 
             elif self.state == self.S7_START_TEST:
-                #enable the motor, zero encoder, reset pid
-                #command same forward wheel speed for both wheels
-                #first with a setpoint of 1-2 rad/s
-                #then with a setpoint of 10-15 rad/s
+                self.prepare_pid()
+                self.motor.enable()
                 pass
 
             elif self.state == self.S8_TAKE_SAMPLES:
-                #take the samples at each setpoint 
-                #record the time, setpoint existing feedback velocity, 
-                #and limitted voltage
-                #plot velocity with a setpoint against time
-                pass
-            
+                time_now = ticks_us()
+                # Copy of cm/s control loop
+
+                # Abort test
+                if self.mode.value != "test": 
+                    self.motor.set_effort(0)
+                    self.motor.disable()
+                    self.state = self.S9_STOP_TEST
+
+                else:
+                    target_rad_s = self.target.value / self.wheel_radius_cm
+                    self.control_velocity(self.target.value)
+
+                # Record data if sample period elapsed
+                if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
+                    self.data["time_us"] = time_now
+                    self.data["setpoint_rad_s"] = target_rad_s
+                    self.data["velocity_rad_s"] = self.actual_velocity.value
+
+                    self.next_test = ticks_add(time_now, self.period_ms * 1000)
+                
+
             elif self.state == self.S9_STOP_TEST:
                 # Power off motors and lower test_flag
                 self.motor.set_effort(0)

@@ -68,7 +68,8 @@ def make_data():#buffer: memory that temporalily hold data
     capacity = 2000 // MOTOR_PERIOD_MS + 2
     return Share({
         "time_us": array("L", [0] * capacity), #microseconds elapsed
-        "velocity_rad_s": array("f", [0.0] * capacity), #desired wheel rad/s
+        "setpoint_rad_s": array("f", [0.0 * capacity]), #Target wheel rad/s
+        "velocity_rad_s": array("f", [0.0] * capacity), #Current wheel rad/s
         "count": 0, #sample count for indexing arrays
         "status": "completed", #failed to connect if over capacity.
     }, dict)
