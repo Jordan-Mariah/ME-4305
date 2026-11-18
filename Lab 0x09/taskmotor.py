@@ -84,6 +84,7 @@ class TaskMotor:
             if self.state == self.S0_IDLE:
                 if self.test_flag.value and self.mode.value != "stop":
                     self.start_test()
+                    self.mode.value = "test"
                 elif any(flag.value for flag in self.test_flags):
                     self.motor.set_effort(0)
                     self.motor.disable()
@@ -156,6 +157,7 @@ class TaskMotor:
                 #move to settle state
                 if self.mode.value == "stop":
                     self.state = self.S4_STOP
+                    self.test_flag.value = False
                 else:
                     self.test_flag.set(True)
                     self.state = self.S6_SETTLE
@@ -170,7 +172,9 @@ class TaskMotor:
             elif self.state == self.S7_START_TEST:
                 self.prepare_pid()
                 self.motor.enable()
-                pass
+
+                self.next_test = ticks_us()
+                self.state = self.S8_TAKE_SAMPLES
 
             elif self.state == self.S8_TAKE_SAMPLES:
                 time_now = ticks_us()
@@ -186,13 +190,13 @@ class TaskMotor:
                     target_rad_s = self.target.value / self.wheel_radius_cm
                     self.control_velocity(self.target.value)
 
-                # Record data if sample period elapsed
-                if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
-                    self.data["time_us"] = time_now
-                    self.data["setpoint_rad_s"] = target_rad_s
-                    self.data["velocity_rad_s"] = self.actual_velocity.value
+                    # Record data if sample period elapsed
+                    if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
+                        self.data.value["time_us"] = time_now
+                        self.data.value["setpoint_rad_s"] = target_rad_s
+                        self.data.value["velocity_rad_s"] = self.actual_velocity.value
 
-                    self.next_test = ticks_add(time_now, self.period_ms * 1000)
+                        self.next_test = ticks_add(time_now, self.period_ms * 1000)
                 
 
             elif self.state == self.S9_STOP_TEST:
@@ -248,7 +252,7 @@ class TaskMotor:
         self.prepare_pid()
         self.test_start = ticks_us()
         self.motor.enable()
-        self.state = self.S8_TEST
+        self.state = self.S5_TEST
         self.control_velocity(self.test_speed)
 
     def finish_test(self, status):

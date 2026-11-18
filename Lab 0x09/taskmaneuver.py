@@ -65,7 +65,6 @@ class TaskManeuver:
             if any(flag.value for flag in self.test_flags):
                 self.line_follow_flag.set(False)
                 self.lane_change_flag.set(False)
-                self.set_targets(0.0, 0.0, "idle")
                 self.state = self.S0_IDLE
                 yield self.state
                 continue
