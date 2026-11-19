@@ -174,6 +174,7 @@ class TaskMotor:
                 self.motor.enable()
 
                 self.next_test = ticks_us()
+                self.test_idx = 0
                 self.state = self.S8_TAKE_SAMPLES
 
             elif self.state == self.S8_TAKE_SAMPLES:
@@ -181,22 +182,26 @@ class TaskMotor:
                 # Copy of cm/s control loop
 
                 # Abort test
-                if self.mode.value != "test": 
-                    self.motor.set_effort(0)
-                    self.motor.disable()
-                    self.state = self.S9_STOP_TEST
+                # if self.mode.value != "test": 
+                #     self.motor.set_effort(0)
+                #     self.motor.disable()
+                #     self.state = self.S9_STOP_TEST
 
-                else:
+                if True: #else:
                     target_rad_s = self.test_speed
-                    self.control_velocity(target_rad_s)
+                    current_volt = self.control_velocity(target_rad_s)
 
                     # Record data if sample period elapsed
                     if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
-                        self.data.value["time_us"] = time_now
-                        self.data.value["setpoint_rad_s"] = target_rad_s
-                        self.data.value["velocity_rad_s"] = self.actual_velocity.value
+                        self.data.value["time_us"][self.test_idx] = time_now
+                        self.data.value["setpoint_rad_s"][self.test_idx] = target_rad_s
+                        self.data.value["velocity_rad_s"][self.test_idx] = self.actual_velocity.value / 2
+                        self.data.value["voltage_V"][self.test_idx] = current_volt
 
-                        self.next_test = ticks_add(time_now, self.period_ms * 1000)
+                        self.next_test = ticks_add(time_now, 5 * 1000)
+                        self.test_idx += 1
+                        self.data.value["count"] = self.test_idx
+
                 
 
             elif self.state == self.S9_STOP_TEST:

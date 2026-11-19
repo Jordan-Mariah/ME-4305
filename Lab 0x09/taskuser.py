@@ -20,7 +20,7 @@ class TaskUser:
     TERMINATORS: set = {"\r", "\n"}
 
     LINE_HEADER = "Begin motor-test data"
-    LINE_COLUMNS = "time_us,setpoint_rad_s,velocity_rad_s,voltage_V"
+    LINE_COLUMNS = "time_us,setpoint_rad_s,velocity_rad_s"
     LINE_FOOTER = "End of motor-test data"
     LINE_READY = "Ready for next motor test"
 

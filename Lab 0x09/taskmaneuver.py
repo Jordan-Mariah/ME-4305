@@ -74,9 +74,9 @@ class TaskManeuver:
                     #the base wheel speed (rad/s)
                     self.active_setpoint = float(self.next_effort.value)
                     self.state = self.S2_FOLLOW_LINE
-                else:
+                #else:
                     #set the left and right target value shares for the motor task
-                    self.set_targets(0.0, 0.0, "idle")
+                    #self.set_targets(0.0, 0.0, "idle")
 
             elif self.state == self.S2_FOLLOW_LINE:
                 if not self.line_follow_flag.value:
