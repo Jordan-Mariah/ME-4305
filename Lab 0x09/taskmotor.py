@@ -187,8 +187,8 @@ class TaskMotor:
                     self.state = self.S9_STOP_TEST
 
                 else:
-                    target_rad_s = self.target.value / self.wheel_radius_cm
-                    self.control_velocity(self.target.value)
+                    target_rad_s = self.test_speed
+                    self.control_velocity(target_rad_s)
 
                     # Record data if sample period elapsed
                     if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
