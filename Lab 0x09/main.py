@@ -34,10 +34,11 @@ LEFT_ENCODER_SIGN = -1
 RIGHT_DRIVER_SIGN = -1
 RIGHT_ENCODER_SIGN = -1
 # Initial P gain in V/(rad/s) -tunned in testing
-INITIAL_KP = 0.1
+INITIAL_KP = 0.6
+INITIAL_KI = 4.0
 # Keep timing in firmware configuration
 MANEUV_PERIOD_MS = 30
-MOTOR_PERIOD_MS = 30
+MOTOR_PERIOD_MS = 10
 WHEEL_RADIUS_CM = 3.5
 UI_PERIOD_MS = 0
 SENSOR_PERIOD_MS = 50
@@ -194,8 +195,8 @@ def main():
 
     
     #Configure PID control left and right 
-    left_pid = PID(INITIAL_KP,KI,KD,KM)
-    right_pid = PID(INITIAL_KP,KI,KD,KM)
+    left_pid = PID(INITIAL_KP,INITIAL_KI,KD,KM)
+    right_pid = PID(INITIAL_KP,INITIAL_KI,KD,KM)
 
     #instantiate timer specifically for ADC channels
     sensor_timer = Timer(6)

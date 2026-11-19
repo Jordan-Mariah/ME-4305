@@ -77,14 +77,14 @@ class PID():
         if self._invalid:
             raise RuntimeError(f"{self}: PID initialization failed")
 
-        out: list[float] = []#initialization of out
+        out: list[float] = [] #initialization of out
         dt: float
         # Get error
         self.error_now = target - current
 
         # find the elapssed time, set dt to zero for the first call after initializing
         if not self.error_last == -1:
-            dt = ticks_diff(ticks_us(), self.time_last)
+            dt = ticks_diff(ticks_us(), self.time_last) / 1000000 # Convert us to s
         else:
             dt = 0
             self.error_last = self.error_now
@@ -103,9 +103,9 @@ class PID():
             out.append(outki)
 
         # Feed forward gain
-        if not self.ff_gain == None:
-            outff = target * self.ff_gain
-            out.append(outff)
+        # if not self.ff_gain == None:
+        #     outff = target * self.ff_gain
+        #     out.append(outff)
 
         #add the accumulated error from the interval to the error sum
         self.error_last = self.error_now

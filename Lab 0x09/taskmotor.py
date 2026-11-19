@@ -195,7 +195,7 @@ class TaskMotor:
                     if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
                         self.data.value["time_us"][self.test_idx] = time_now
                         self.data.value["setpoint_rad_s"][self.test_idx] = target_rad_s
-                        self.data.value["velocity_rad_s"][self.test_idx] = self.actual_velocity.value / 2
+                        self.data.value["velocity_rad_s"][self.test_idx] = self.actual_velocity.value
                         self.data.value["voltage_V"][self.test_idx] = current_volt
 
                         self.next_test = ticks_add(time_now, 5 * 1000)
