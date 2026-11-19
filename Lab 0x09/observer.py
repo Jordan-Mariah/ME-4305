@@ -1,5 +1,6 @@
 
-from ulab import numpy as np
+#from ulab 
+import numpy as np
 
 # Lab 0x09 - Observer Numerical Verification
 # Selected observer parameters:
@@ -17,15 +18,15 @@ Ao = np.array([
     [0.0, -272.24589895928926, 1.0],
 ])
 
-# Observer input matrix
-# Input order: [limited voltage, encoder position]
+# Observer input matrix- how voltage and measured position effect next estimate
+# limitted voltage and encoder position
 Bo = np.array([
     [1.2130225529995458, 8.8387999412756564],
     [0.012987940009021343, 0.97600926513887409],
     [0.0, 272.24589895928926],
 ])
 
-# Observer output matrix
+# which estimates are reported
 Co = np.array([
     [1.0, 0.0, 0.0],
     [0.0, 1.0, 0.0],
@@ -64,29 +65,37 @@ expected_next = [
     2.22245898959289
 ]
 
-# Compare results with MATLAB
-def compare_vector(label, measured, expected, tolerance=0.001):
-    passed = True
+class Observer:
+    def __init__(self):
+        # State order array [vel, pos, disturb]
+        self.x = (np.zeros((3, 1))) #initial state estimate = 0
 
-    for i in range(len(expected)):
-        difference = abs(float(measured[i]) - expected[i])
+        # Input array w = [uk, pos_meas]
+        self.w = np.zeros((2, 1))
 
-        print(
-            "%s[%d]: measured=%.8f, MATLAB=%.8f, diff=%.8g"
-            % (label, i, float(measured[i]), expected[i], difference)
-        )
+        #array for the observer to calculate
+        self.x_next = (np.zeros((3, 1)))
 
-        if difference > tolerance:
-            passed = False
+    def next_estimate(self, encoder_position: float, voltage: float):
+        self. w[0] = voltage
+        self.w[1] = encoder_position
+    
+        self.x_next = np.dot(Ao, self.x_next) + np.dot(Bo, self.w)
+        estimated_velocity = self.x_next[0]
+        
+        return estimated_velocity
 
-    print(label + ": " + ("PASS" if passed else "FAIL"))
-    return passed
+    #used to reset observer when motor is at rest
+    def reset(self, encoder_position: float):
 
-output_ok = compare_vector("y_check", y_check, expected_y)
+        self.x_next = (np.zeros((3, 1)))
+        # Call while the motor is at rest.
+        #initial velocity estimate = 0
+        self.x[0] = 0.0
+        #set initial position 
+        self.x[1] = encoder_position
+        #iniital disturbance estimate= 0
+        self.x[2] = 0.0
 
-state_ok = compare_vector("x_next_check", x_next_check, expected_next)
-
-if output_ok and state_ok:
-    print("OVERALL: PASS")
-else:
-    print("OVERALL: FAIL")
+        self.w[0] = 0.0
+        self.w[1] = encoder_position
