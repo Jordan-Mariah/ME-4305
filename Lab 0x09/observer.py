@@ -1,6 +1,5 @@
 
-#from ulab 
-import numpy as np
+from ulab import numpy as np
 
 # Lab 0x09 - Observer Numerical Verification
 # Selected observer parameters:
@@ -50,10 +49,10 @@ y_check = np.dot(Co, x_check) + np.dot(Do, w_check)
 # Calculate next observer state
 x_next_check = np.dot(Ao, x_check) + np.dot(Bo, w_check)
 
-print("Current output y_check:")
+print("observer: Current output y_check:")
 print(y_check)
 
-print("Next state x_next_check:")
+print("observer: Next state x_next_check:")
 print(x_next_check)
 
 # Expected MATLAB results from updated Live Script
@@ -81,7 +80,7 @@ class Observer:
         self.w[1] = encoder_position
     
         self.x_next = np.dot(Ao, self.x_next) + np.dot(Bo, self.w)
-        estimated_velocity = self.x_next[0]
+        estimated_velocity = self.x_next[0][0]
         
         return estimated_velocity
 

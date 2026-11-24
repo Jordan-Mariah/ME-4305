@@ -5,6 +5,7 @@ from driver import Motor
 from encoder import Encoder
 from tshare import Share
 from PIDcontroler import PID
+from observer import Observer
 from math import pi, isfinite, sin, radians
 import line_sensor # Only for constant access. Maybe a better solution
 
@@ -67,9 +68,18 @@ class TaskMotor:
             raise ValueError("Motor period must be positive")
         self.period_ms = period_ms
 
+        # Create observer
+        # NOTE: I am doing this here and not main because
+        # the observer has no construction parameters. If it
+        # werent for the fact that it has it's own state, it
+        # could be a function.
+
+        self.observer = Observer()
+
         # Set starting values
         self.test_flag.set(False)
         self.state = self.S0_IDLE
+        self.applied_voltage = 0.0
         self.motor.set_effort(0)
         self.motor.disable()
 
@@ -221,8 +231,9 @@ class TaskMotor:
         measured_velocity = self.actual_velocity.value
 
         #clip voltage to battery voltage
-        voltage = self.pid.next_output(target_rad_s, measured_velocity)
-        voltage = max(-self.battery_voltage, min(self.battery_voltage, voltage))
+        pid_output = self.pid.next_output(target_rad_s, measured_velocity)
+        self.applied_voltage = max(-self.battery_voltage, min(self.battery_voltage, pid_output))
+        voltage = self.applied_voltage
 
         #set motor effort based on duty cycle from calculated votage that attains desired velocity
         duty_percent = 100 * voltage / self.battery_voltage
@@ -233,8 +244,12 @@ class TaskMotor:
         """update the encoder and get the measured and actual velocity and position"""
         #update encoder for each itteration of run
         self.encoder.update()
-        #measure velocity in rad/s and set actual velocity to be measured velocity
-        measured_velocity = (self.encoder_sign * self.encoder.get_velocity()* 2 * pi / self.counts_per_revolution)
+
+        # Pass new values into observer to estimate current state
+        observer_velocity = self.observer.next_estimate(self.encoder.get_position(), self.applied_voltage) #TODO running this causes out of memory error (maybe?)
+        
+        # measure velocity in rad/s and set actual velocity to be measured velocity
+        measured_velocity = (self.encoder_sign * observer_velocity * 2 * pi / self.counts_per_revolution)
         self.actual_velocity.set(measured_velocity)
         #get postion in cm and set position to be measured position
         measured_position = (self.encoder_sign * self.encoder.get_position() * 2 * pi / self.counts_per_revolution)
@@ -245,6 +260,7 @@ class TaskMotor:
         if self.next_kp is not None:
             self.pid.set_kp(float(self.next_kp.value))
         self.pid.reset()
+        self.observer.reset(self.encoder.get_position())
 
     def start_test(self):
         buffer = self.data.value

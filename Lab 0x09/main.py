@@ -17,6 +17,7 @@ from pyb import Timer, Pin, USB_VCP, I2C
 from IMU import BNO055, IMU_I2C_BUS
 from IMU_calibration import load_imu_calibration, save_imu_calibration
 import cotask # type: ignore
+import gc
 #creates the driver and task objects, then repeatedly schedules their generators
 
 from line_sensor import(
@@ -147,8 +148,11 @@ def setup_imu_calibration(imu: BNO055, force=False):
     print("saved IMU calibration")
 
 def main():
-    #Create objects to be passed to tasks
+    # Call dibs on a large enough section of RAM to gurrentee room for profiler
+    gc.collect()
+    profiler_reserve = bytearray(2048)
 
+    #Create objects to be passed to tasks
     #Create left motor
 
     left_pwm = Timer(4, freq=20_000).channel(
@@ -421,6 +425,10 @@ def main():
     finally:
         left_mot.disable()
         right_mot.disable()
+
+        # Ensure there is enough memory for profiler output
+        gc.collect()
+        profiler_reserve = None
         print(cotask.task_list.profile())
     
     
