@@ -1,38 +1,62 @@
 
 """Configure P trials, save complete response data, and plot velocity/voltage."""
+
+
+
+
 #automate the collection of motor responses
 #Can be run on PC after the manual firmware testing
 #** Install dependencies with: python -m pip install pyserial matplotlib
 #First must configure the serial ports
-import csv #added
-import math #added
+#added
+import csv
+#added
+import math
 from datetime import datetime
-from pathlib import Path #added
+#added
+from pathlib import Path
 from time import monotonic
+
 
 # Serial-port settings. Change SERIAL_PORT to the computer's com port
 SERIAL_PORT = "COM5"
 BAUDRATE = 115_200
 SERIAL_TIMEOUT = 0.25
 
+
+
+
+
+
 # Single-character commands are sent as soon as they are chosen; they do not
 # need a line ending. Students will extend this into the duty-cycle and
 # two-motor command sequence. A multicharacter numeric value does need the line
 # ending expected by the firmware so that it knows when entry is complete.
+#changed
+NUMERIC_LINE_ENDING = "\r"
 
-NUMERIC_LINE_ENDING = "\r" #changed
 
+
+
+
+RUN_MODE = "wheel"
 #Here we test duty cycle by reeplacing the starter's single START_COMMAND with two motor/duty pairs
 #For tests we now have three different proportional gain trials 
 #tune these
 #now have a wheel 
-RUN_MODE = "line"
 LINE_BASE_SPEED = 2.0
 LINE_INNER_KP = 0.1
 LINE_DURATION_S = 2.0
 LINE_FIRMWARE_READY = True
 
-TESTS = (("left", 5.0, 0.4),("right", 5.0, 0.4))
+TESTS = (("right", 1.5, 0.6), ("right", 13.0, 0.6))
+
+
+
+
+
+
+
 # Stop waiting and report an error instead of hanging forever if the firmware
 # does not respond or stops transmitting partway through a dataset.
 # monotonic() returns a steadily increasing time in seconds. Its starting value
@@ -42,84 +66,145 @@ TESTS = (("left", 5.0, 0.4),("right", 5.0, 0.4))
 #FIRST_RESPONSE_TIMEOUT covers command acknowledgements and beginning marker.
 FIRST_RESPONSE_TIMEOUT = 30.0
 BETWEEN_LINES_TIMEOUT = 5.0
+
+
+
 # The firmware should print this marker on its own line after the last data row.
 # Using an explicit marker is more reliable than assuming that a quiet serial
 # port means the dataset is complete.
-END_MARKER = "End of data:" #* Outcome follows the colon.
+#* Outcome follows the colon.
+END_MARKER = "End of data:"
+
+
+HEADERS = [
+    "time_us",
+    "setpoint_rad_s",
+    "velocity_rad_s",
+    "estimated_velocity_rad_s",
+    "limited_voltage_V",
+]
 
 #Here match the firware headers
-HEADERS = ["time_us", "setpoint_rad_s", "velocity_rad_s", "limited_voltage_V"] #* MCU columns.
+#* MCU columns.
 #organize the plots ouputs
-OUTPUT_DIRECTORY = Path(__file__).resolve().parent / "results" #added
+#added
+OUTPUT_DIRECTORY = Path(__file__).resolve().parent / "results"
+
 
 
 #turn serial bytes into computer into lines of text
-class LineReader: #added
+#added
+class LineReader:
+
     #store serial conect and make empty byte buffer
-    def __init__(self, serial): #added
-        self.serial = serial #added
+    #added
+    def __init__(self, serial):
+        #added
+        self.serial = serial
+
         #contructs mutable byte aray
-        self.pending = bytearray() #added
+        #added
+        self.pending = bytearray()
+
 
     #recieves bytes until can make a full line then converts bytes to text
-    def read(self, deadline): #added
-        while monotonic() < deadline: #added- while clock less than dealine
+    #added
+    def read(self, deadline):
+        #added- while clock less than dealine
+        while monotonic() < deadline:
+
             #search the buffered byte for a newline
-            newline = self.pending.find(b"\n") #added
-            if newline >= 0: #added
+            #added
+            newline = self.pending.find(b"\n")
+            #added
+            if newline >= 0:
+
                 #put everything before newline in raw
-                raw_line = self.pending[:newline] #added
+                #added
+                raw_line = self.pending[:newline]
+
                 #remove the bytes and newline characters from the buffer-added
                 del self.pending[:newline + 1] 
+
+
                 #convert bytes to pythons string, sub replacement char for incalid utf-8, and
                 #remove surounding whitespace
-                return raw_line.decode("utf-8", errors="replace").strip() #added
+                #added
+                return raw_line.decode("utf-8", errors="replace").strip()
+
+
             # readline() returns b"" when its short serial timeout expires. Keep
             # polling until the longer application timeout has also expired.
-            self.pending.extend(self.serial.readline()) #added
+            #added
+            self.pending.extend(self.serial.readline())
         raise TimeoutError(
-            "Timed out waiting for a complete firmware line; partial bytes: {!r}".format(bytes(self.pending))) #changed
+            "Timed out waiting for a complete firmware line; partial bytes: {!r}".format(bytes(self.pending)))
 
+
+#changed
 #wait for firmware acknowledgements
-def wait_for(reader, expected): #added
+#added
+def wait_for(reader, expected):
+
     #figureout firware reply missing
-    print(f"Waiting for: {expected!r}") #added
+    #added
+    print(f"Waiting for: {expected!r}")
+
     #calc for when to stop waiting
-    deadline = monotonic() + FIRST_RESPONSE_TIMEOUT #added
-    while True: #added
+    #added
+    #save partial data if collection fails, and raise an error to stop the program
+    deadline = monotonic() + FIRST_RESPONSE_TIMEOUT
+    #added
+    while True:
+
         #asks reader for a fulll line of text
-        try: #added
-            line = reader.read(deadline) #added
-        except TimeoutError as error: #added
-            raise TimeoutError(f"Expected {expected!r}: {error}") from error #added
-        print(line) #added
+        #added
+        try:
+            line = reader.read(deadline)
+        except TimeoutError as error:
+            #added
+            #added
+            raise TimeoutError(f"Expected {expected!r}: {error}") from error
+        #added
+        print(line)
+
         #does recieved string match expected
-        if line == expected: #added
-            return line #acknowledgment
+        #added
+        if line == expected:
+            #acknowledgment
+            return line
+
         #check for firmwareerrors
-        if "out of range" in line or line.startswith(("Invalid input", "Motor test busy", "Test rejected")): #added
-            raise RuntimeError(line) #added
+        #added
+        if "out of range" in line or line.startswith(("Invalid input", "Motor test busy", "Test rejected")):
+            #added
+            raise RuntimeError(line)
+
+
 
 #had copilot help with the structuring of the conditionalls uin this function
 #to handle all of the the possible collection failure modes
 def collect_dataset(reader, motor, setpoint, kp, filename):
-    #save partial data if collection fails, and raise an error to stop the program
+
     deadline = monotonic() + FIRST_RESPONSE_TIMEOUT
     while True:
         metadata = reader.read(deadline)
         if metadata.startswith("Begin data: "):
             break
-        if metadata.startswith(("Motor test busy", "Invalid input")):
+        if metadata.startswith(("Motor test busy", "Invalid input", "Test rejected")):
             raise RuntimeError(metadata)
     config = dict(field.split("=", 1) for field in metadata[len("Begin data: "):].split(","))
     rows = []
+
     #Write as samples arrive. This way incomplete/failed runs retain their data.
     with filename.open("x", encoding="utf-8", newline="") as stream:
         stream.write("# " + metadata + "\n")
         writer = csv.writer(stream)
         writer.writerow(HEADERS)
         try:
-            if (config.get("motor") != motor or config.get("mode") != "P"
+            if (config.get("motor") != motor or config.get("mode") not in ("original", "discrete_pi")
+                    or config.get("feedback") not in ("encoder", "observer")
+                    or (config.get("mode") == "discrete_pi" and config.get("feedback") != "observer")
                     or float(config["setpoint_rad_s"]) != setpoint or float(config["kp"]) != kp):
                 raise ValueError("Firmware configuration does not match requested trial")
             wait_for(reader, ",".join(HEADERS))
@@ -146,25 +231,33 @@ def collect_dataset(reader, motor, setpoint, kp, filename):
             stream.write("# Collection incomplete: {}\n".format(error))
             raise
 
+
 #save the measurements as plots with matplotlib
 def save_plot(filename, motor, setpoint, kp, config, rows):
+    import matplotlib
+    matplotlib.use("Agg")
     from matplotlib import pyplot
+
     # The measured velocity/setpoint are plotted together, and voltage on separate axes.
     figure, axes = pyplot.subplots(2, 1, sharex=True)
     try:
         times = [row[0] / 1_000_000 for row in rows]
         axes[0].plot(times, [row[2] for row in rows], label="Measured velocity")
+        axes[0].plot(times,[row[3] for row in rows], label="Observer velocity")
         axes[0].plot(times, [row[1] for row in rows], "--", label="Setpoint")
         axes[0].set_ylabel("Velocity [rad/s]")
         axes[0].legend()
-        axes[1].plot(times, [row[3] for row in rows])
+        axes[1].plot(times, [row[4] for row in rows])
         axes[1].set_ylabel("Limited voltage [V]")
         axes[1].set_xlabel("Elapsed time [s]")
         period = config.get("motor_period_ms", "unreported")
-        axes[0].set_title(f"{motor.title()} P control: Kp={kp:g}, setpoint={setpoint:g} rad/s, period={period} ms")
+        feedback = config.get("feedback", "unreported")
+        controller = config.get("mode", "unreported")
+        axes[0].set_title(f"{motor.title()} {controller}, {feedback} feedback: Kp={kp:g}, setpoint={setpoint:g} rad/s, period={period} ms")
         for axis in axes:
             axis.grid(True)
         figure.tight_layout()
+
         #save plot without overwriting current file
         with filename.open("xb") as output:
             figure.savefig(output, format="png", dpi=200)
@@ -180,10 +273,14 @@ def configure_number(ser, reader, command, prompt, value):
     wait_for(reader, f"Value set to {value}")
 
 
+
 #uses the serial port to run the left and right tests together
 def main():
+
     #import pyserial class and serial exception class
     from serial import Serial, SerialException
+
+
     # Validate trials against with UI before opening the port
     #* just one trial or a sequence of trials.
     if not TESTS:
@@ -193,17 +290,25 @@ def main():
             raise ValueError("Choose left or right motor")
         if not math.isfinite(setpoint) or abs(setpoint) > 1000 or not math.isfinite(kp) or not 0 <= kp <= 1000:
             raise ValueError("Trial configuration is outside UI limits")
+
     # General results dirrectory   
-    OUTPUT_DIRECTORY.mkdir(exist_ok=True) #changed
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f") #changed
+    #changed
+    OUTPUT_DIRECTORY.mkdir(exist_ok=True)
+    #changed
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
     run_dir = OUTPUT_DIRECTORY / timestamp 
     run_dir.mkdir() 
-    try: #timeout limits the serial read time, write_timeout limits write wait, with closes port
-        with Serial(SERIAL_PORT, baudrate=BAUDRATE, #changed
-                    timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser: #changed
-            ser.reset_input_buffer()#disgard the unread serial all together
-            reader = LineReader(ser) #added-call line reader class to assemble text lines
+    #timeout limits the serial read time, write_timeout limits write wait, with closes port
+    try:
+        #changed
+        with Serial(SERIAL_PORT, baudrate=BAUDRATE,
+                    timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser:
+            #changed
+            #disgard the unread serial all together
+            ser.reset_input_buffer()
+            reader = LineReader(ser)
             try:
+
                 #trial so dupes dont overwrite.
                 for trial, (motor, selected_setpoint, selected_kp) in enumerate(TESTS, start=1):
                     setpoint, kp = float(selected_setpoint), float(selected_kp)
@@ -213,25 +318,32 @@ def main():
                     run_name = f"trial_{trial:02d}_{motor}_kp_{kp:g}"
                     data_filename = run_dir / (run_name + ".csv")
                     metadata, config, rows = collect_dataset(reader, motor, setpoint, kp, data_filename)
+
                     # MCU buffers released before configuring another run.
                     wait_for(reader, "Ready for next test")
                     save_plot(run_dir / (run_name + ".png"), motor, setpoint, kp, config, rows)
                     print(f"Saved {len(rows)} rows and plot to {data_filename}")
             finally:
-                #Ask firmware to stop even after errors. Context closes the port.
+
                 ser.write(b"e")
 
-    #error handling for communication, waiting validation,and protocol handling
+
     except (SerialException, TimeoutError, ValueError, RuntimeError) as error:
+        #error handling for communication, waiting validation,and protocol handling
         raise SystemExit(f"Collection failed: {error}") from error
-    except KeyboardInterrupt: #allows for ctrl+c
-        raise SystemExit("Collection interrupted; serial port closed.") #added
+    except KeyboardInterrupt:
+        #allows for ctrl+c
+        #added
+        raise SystemExit("Collection interrupted; serial port closed.")
+
 
 
 #copy the line folowing data to PC
 def collect_line_dataset(reader, filename):
+
     #dealine for waiting
     deadline = monotonic() + FIRST_RESPONSE_TIMEOUT + LINE_DURATION_S
+    #added
     line = reader.read(deadline)
     while not line.startswith("Begin data: "):
         line = reader.read(deadline)
@@ -291,6 +403,7 @@ def plot_line_data(filename):
     plt.close()
     print("Saved centroid plot to", filename.with_suffix(".png"))
 
+
 #run, send settings for line following to romi, requests run saves data, attempts to stop
 def run_line_mode():
     from serial import Serial
@@ -308,6 +421,7 @@ def run_line_mode():
 
     with Serial(SERIAL_PORT, baudrate=BAUDRATE,
                 timeout=SERIAL_TIMEOUT, write_timeout=2.0) as ser:
+        #added-call line reader class to assemble text lines
         reader = LineReader(ser)
         try:
             ser.write(b"s")
@@ -353,6 +467,7 @@ def run_line_mode():
                 print("No centroid samples received. TaskUser must export time_us,centroid_mm data.")
         finally:
             ser.write(b"s")
+            #Ask firmware to stop even after errors. Context closes the port.
             ser.write(b"e")
 
 
