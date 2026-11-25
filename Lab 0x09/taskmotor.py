@@ -7,6 +7,7 @@ from tshare import Share
 from PIDcontroler import PID
 from observer import Observer
 from math import pi, isfinite, sin, radians
+from array import array
 import line_sensor # Only for constant access. Maybe a better solution
 
 class TaskMotor:
@@ -32,6 +33,7 @@ class TaskMotor:
     MAX_TURN_RATIO: float = 0.2 # Max multiplier applied to target speed to stay on line
     MERGE_TURN_RATIO: float = 0.2 # Multiplier applied to target speed when changing lanes
     LANE_DISTANCE: float = 20.0
+    DATA_BUFFER_SIZE: int = 200
 
 
     '''1) determining whethere motor driver side is left or right 
@@ -40,7 +42,7 @@ class TaskMotor:
     4) Init motor's timer channels
     5)calling the Motor class for left or right motor '''
     def __init__(self, motor: Motor,encoder: Encoder, pid: PID, mode: Share, target: Share, actual_velocity: Share, position_cm: Share, test_flag: Share,
-                 next_kp: Share, data:Share, name: str, battery_voltage, counts_per_revolution, wheel_radius_cm, driver_sign, encoder_sign, period_ms=100, test_target=None, test_duration_ms=2000, test_flags=()):
+                 next_kp: Share, data:dict, name: str, battery_voltage, counts_per_revolution, wheel_radius_cm, driver_sign, encoder_sign, period_ms=100, test_target=None, test_duration_ms=2000, test_flags=()):
         #Pull args
         self.test_target = test_target
         self.test_duration_us = test_duration_ms * 1000
@@ -93,8 +95,9 @@ class TaskMotor:
             # Yield without driving the motor until start() changes the state.
             if self.state == self.S0_IDLE:
                 if self.test_flag.value and self.mode.value != "stop":
-                    self.start_test()
+                    #self.start_test()
                     self.mode.value = "test"
+                    self.state = self.S5_TEST
                 elif any(flag.value for flag in self.test_flags):
                     self.motor.set_effort(0)
                     self.motor.disable()
@@ -183,6 +186,12 @@ class TaskMotor:
                 self.prepare_pid()
                 self.motor.enable()
 
+                # Add data collumns to this motor's data share, and pre-allocate data buffers
+                self.data["time_us"] = array("L")
+                self.data["setpoint_rad_s"] = array("f")
+                self.data["velocity_rad_s"] = array("f")
+                self.data["voltage_V"] = array("f")
+
                 self.next_test = ticks_us()
                 self.test_idx = 0
                 self.state = self.S8_TAKE_SAMPLES
@@ -198,20 +207,30 @@ class TaskMotor:
                 #     self.state = self.S9_STOP_TEST
 
                 if True: #else:
-                    target_rad_s = self.test_speed
+                    target_rad_s = self.target.value
                     current_volt = self.control_velocity(target_rad_s)
 
                     # Record data if sample period elapsed
                     if ticks_diff(time_now, self.next_test) >= 0: # Assumes self.next_test has been set beforehand
-                        self.data.value["time_us"][self.test_idx] = time_now
-                        self.data.value["setpoint_rad_s"][self.test_idx] = target_rad_s
-                        self.data.value["velocity_rad_s"][self.test_idx] = self.actual_velocity.value
-                        self.data.value["voltage_V"][self.test_idx] = current_volt
+
+                        # If data handler is behind and buffer is full, trim the oldest data to make room
+                        full = False
+                        for arr in self.data.values():
+                            if len(arr) >= self.DATA_BUFFER_SIZE:
+                                full = True
+                                break
+                        if full:
+                            for arr in self.data.values():
+                                Tarr: array = arr
+                                Tarr.pop(0)
+
+                        self.data["time_us"].append(time_now)
+                        self.data["setpoint_rad_s"].append(target_rad_s)
+                        self.data["velocity_rad_s"].append(self.actual_velocity.value)
+                        self.data["voltage_V"].append(current_volt)
 
                         self.next_test = ticks_add(time_now, 5 * 1000)
                         self.test_idx += 1
-                        self.data.value["count"] = self.test_idx
-
                 
 
             elif self.state == self.S9_STOP_TEST:

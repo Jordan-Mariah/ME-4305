@@ -64,18 +64,6 @@ IMU_CONFIG = {
     "axis_map_sign": 0x00,
 }
 
-#may but 
-def make_data():#buffer: memory that temporalily hold data
-    #size buffer for the samples int he 2 second test. 
-    capacity = 2000 // MOTOR_PERIOD_MS + 2
-    return Share({
-        "time_us": array("L", [0] * capacity), #microseconds elapsed
-        "setpoint_rad_s": array("f", [0.0] * capacity), #Target wheel rad/s
-        "velocity_rad_s": array("f", [0.0] * capacity), #Current wheel rad/s
-        "voltage_V": array("f", [0.0] * capacity),
-        "count": 0, #sample count for indexing arrays
-        "status": "completed", #failed to connect if over capacity.
-    }, dict)
 
 def setup_line_calibration(sensor, force=False):
     filename = "line_calibration.json"
@@ -150,7 +138,7 @@ def setup_imu_calibration(imu: BNO055, force=False):
 def main():
     # Call dibs on a large enough section of RAM to gurrentee room for profiler
     gc.collect()
-    profiler_reserve = bytearray(2048)
+    profiler_reserve = bytearray(4096)
 
     #Create objects to be passed to tasks
     #Create left motor
@@ -237,8 +225,7 @@ def main():
     right_test_flag = Share(False, bool)
     line_follow_flag = Share(False, bool)
     imu_flag = Share(False, bool)
-    left_data = make_data() #\preallocate a buffers for each wheel seperately.
-    right_data = make_data()
+    data = Share({}, dict)
     next_effort = Share(0.0, float) # Velocity setpoint (rad/s)
     next_kp = Share(INITIAL_KP, float) # Selected gain from user interface
     sensor_flag = Share(False, bool) # Flag to start or stop collecting data
@@ -254,6 +241,12 @@ def main():
     sensor_data.value["white_background"] = False
     sensor_data.value["line_detected"] = False
     sensor_data.value["sensor_time_us"] = None
+
+    # Pre-assign data keys for both motors
+    data.value["right_motor"] = {}
+    data.value["left_motor"] = {}
+    right_data = data.value["right_motor"]
+    left_data = data.value["left_motor"]
 
     left_mode = Share("idle", str)
     right_mode = Share("idle", str)

@@ -2,6 +2,7 @@
 from pyb import USB_VCP # type: ignore
 from tshare import Share
 from math import isfinite
+from array import array
 #steps
 #prompt user for input
 #go into FSM depending on user string response
@@ -25,7 +26,7 @@ class TaskUser:
     LINE_READY = "Ready for next motor test"
 
     #initialize at the begining of the task
-    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: Share, right_data: Share, next_effort: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, imu_flag: Share, following_target: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
+    def __init__(self, left_test_flag: Share, right_test_flag: Share, left_data: dict, right_data: dict, next_effort: Share, line_follow_flag: Share, lane_change_flag: Share, lane_change_dir: Share, imu_flag: Share, following_target: Share, serial: USB_VCP, next_kp=None, motor_period_ms=100, ui_period_ms=0, battery_voltage=None, sensor_flag=None):
         # initialize all of the data as finite objects in task user
         self.left_test_flag = left_test_flag
         self.right_test_flag = right_test_flag
@@ -83,8 +84,11 @@ class TaskUser:
 
     def test_busy(self):
             #returns true if test running, requested, or sending data and otherwise false
+            right_data_pending = bool(self.right_data) and all(len(arr) > 0 for arr in self.right_data.values())
+            left_data_pending = bool(self.left_data) and all(len(arr) > 0 for arr in self.left_data.values())
+
             return bool(self.left_test_flag.value or self.right_test_flag.value
-                    or self.left_data.value["count"] or self.right_data.value["count"] or self.current_test)
+                    or left_data_pending or right_data_pending or self.current_test)
 
     def run(self):
         self.print_help()
@@ -97,11 +101,13 @@ class TaskUser:
                     self.new_char = buff.decode()#convert byutes into character and set new_char
                     self.state = self.S1_PROCESS_COMMAND
 
-                
+                right_data_pending = bool(self.right_data) and all(len(arr) > 0 for arr in self.right_data.values())
+                left_data_pending = bool(self.left_data) and all(len(arr) > 0 for arr in self.left_data.values())
+
                 if self.current_test == "":#if string is empty
-                    if self.left_test_flag.value or self.left_data.value["count"]:
+                    if self.left_test_flag.value or left_data_pending:
                         self.current_test = "left" #select motor if test requested for that motor
-                    elif self.right_test_flag.value or self.right_data.value["count"]:
+                    elif self.right_test_flag.value or right_data_pending:
                         self.current_test = "right"
                     if self.current_test:#for data just selected se tthe sampleindex to 0
                         self.export_index = 0
@@ -165,10 +171,11 @@ class TaskUser:
                 elif low_char == "l":
 
                     # Make sure there is no residual data in left data buffer before starting new test
-                    data = self.left_data.value 
+                    data = self.left_data
 
                     #store Kp and velocity had to get help from copiolot on structureing flag conditionals
-                    if self.left_test_flag.value == False and data["count"] == 0:
+                    data_pending = bool(data) and all(len(arr) > 0 for arr in data.values())
+                    if self.left_test_flag.value == False and not data_pending:
                         self.run_setpoint = self.next_effort.value
                         self.run_kp = self.next_kp.value if self.next_kp is not None else 0.001
                         self.left_test_flag.set(True)
@@ -178,10 +185,11 @@ class TaskUser:
 
                 elif low_char == "r":
                     # check for residual data in right data buffer before starting new test
-                    data = self.right_data.value #* Read the preallocated response dictionary.
+                    data = self.right_data #* Read the preallocated response dictionary.
 
                     #check if motor is already running, then make flag so that TaskMotor starts the right motor test
-                    if self.right_test_flag.value == False and data["count"] == 0:
+                    data_pending = bool(data) and all(len(arr) > 0 for arr in data.values())
+                    if self.right_test_flag.value == False and not data_pending:
                         self.run_setpoint = self.next_effort.value
                         self.run_kp = self.next_kp.value if self.next_kp is not None else 0.001
                         self.right_test_flag.set(True)
@@ -297,58 +305,48 @@ class TaskUser:
     def transmit_sample(self):
 
         #set data and flag based on motor side
-        data = self.left_data.value if self.current_test == "left" else self.right_data.value
+        data: dict[str, array] = self.left_data if self.current_test == "left" else self.right_data
         test_flag = self.left_test_flag if self.current_test == "left" else self.right_test_flag
 
+        # If the last line has finished writing, get a new one
         if not self.pending_output:
+            line = ""
+            # Output data begin phrase so auto plotter knows it's coming
             if self.export_phase == "header":
                 line = self.LINE_HEADER
                 self.export_phase = "columns"
 
-            elif self.export_phase == "columns":
-                line = self.LINE_COLUMNS
+            # Output keys for each data collumn so auto plotter knows what each column is
+            elif self.export_phase == "columns" and not data == {}:
+                self.data_keys = tuple([key for key in data.keys()])
+                self.data_values = tuple([arr for arr in data.values()])
+                line = self.data_keys
                 self.export_phase = "rows"
 
+            # Pop off oldest row if there is one
             elif self.export_phase == "rows":
-                if self.export_index < data["count"]:
-                    i = self.export_index
-                    time_us = data["time_us"][i]
+                # Check if all collumns have at least one value
+                if all(self.data_values):
+                    is_end = True
+                    line = []
+                    # Go through each collumn and take off it's oldest value. If all are == -1, finish output.
+                    for arr in self.data_values:
+                        for value in arr.pop(0):
+                            if not int(value) == -1:
+                                is_end = False
+                            line.append(value)
+                    line = str(line)
 
-                    if time_us == 4294967295:
-                        # Consume the end marker, but don't send it as a data row.
-                        self.export_index += 1
-                        line = self.LINE_FOOTER
+                    if is_end:
                         self.export_phase = "finished"
-                    else:
-                        line = "{},{},{},{}".format(
-                            time_us,
-                            data["setpoint_rad_s"][i],
-                            data["velocity_rad_s"][i],
-                            data["voltage_V"][i],
-                        )
-                        self.export_index += 1
-
-                elif test_flag.value or data.get("status") == "running":
-                    # Wait for the recorder to add another sample.
-                    return
-
-                else:
-                    # The recorder stopped and there are no more buffered samples.
-                    line = self.LINE_FOOTER
-                    self.export_phase = "finished"
-
+                        
             elif self.export_phase == "finished":
-                data["count"] = 0
-                self.export_index = 0
                 line = self.LINE_READY
                 self.export_phase = "released"
 
-            else:
-                data["count"] = 0
-                self.export_index = 0
-                return
-
-            self.pending_output = (line + "\r\n").encode()
+            # Assemble next output line as bytes
+            if not line == "":
+                self.pending_output = (str(line) + "\r\n").encode()
 
         sent = self.serial.write(self.pending_output[:128])
         if sent:
