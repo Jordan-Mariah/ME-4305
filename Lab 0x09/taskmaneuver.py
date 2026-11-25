@@ -15,6 +15,8 @@ class TaskManeuver:
     S2_FOLLOW_LINE = 2
     S3_MERGE_LANE = 3
     S4_STOP_MOTOR = 4
+    S5_BLIND_ROLL = 5
+    S6_POINT_AT_ANGLE = 6
 
     # Other task constants
     KP: float = 0.001
@@ -142,6 +144,14 @@ class TaskManeuver:
                 self.line_follow_flag.set(False)
                 self.lane_change_flag.set(False)
                 self.state = self.S0_IDLE
+
+            # Roll forward at set speed. Read encoders to keep orientation constant.
+            elif self.state == self.S5_BLIND_ROLL:
+                pass
+
+            # Control motors to do an on-the-spot rotation to point ROMI at a given angle. 
+            elif self.state == self.S6_POINT_AT_ANGLE:
+                pass
 
             yield self.state
 
