@@ -1,0 +1,1 @@
+{"version": 1, "config": {"axis_map_config": 36, "axis_map_sign": 0, "sensor_id": "romi_imu_1", "sensor": "BNO055", "mounting": "original_mount_v1", "unit_sel": 0, "mode": 8}, "profile": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 253, 255, 232, 3, 224, 1]}
