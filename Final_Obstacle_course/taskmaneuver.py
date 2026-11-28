@@ -15,7 +15,7 @@ class TaskManeuver:
     S2_FOLLOW_LINE = 2
     S3_MERGE_LANE = 3
     S4_STOP_MOTOR = 4
-    S5_BLIND_ROLL = 5
+    S5_BLIND_DRIVE = 5
     S6_POINT_AT_ANGLE = 6
 
     # Other task constants
@@ -36,7 +36,8 @@ class TaskManeuver:
     def __init__(self, left_mode : Share, right_mode: Share, left_target: Share, right_target: Share,
                  left_velocity:Share, right_velocity:Share, left_position_cm:Share, right_position_cm:Share,
                  next_effort:Share , sensor_data: Share, line_follow_flag: Share, lane_change_flag:Share,
-                 lane_change_dir:Share, following_target:Share, test_flags=(), period_ms=30):
+                 lane_change_dir:Share, following_target:Share, maneuver_request:Share, maneuver_status: Share, 
+                 test_flags=(), period_ms=30):
         #Pull args
         self.left_mode = left_mode
         self.right_mode = right_mode
@@ -51,6 +52,8 @@ class TaskManeuver:
         self.line_follow_flag = line_follow_flag
         self.lane_change_flag = lane_change_flag
         self.lane_change_dir = lane_change_dir
+        self.maneuver_request = maneuver_request
+        self.maneuver_status = maneuver_status
         self.following_target = following_target
         self.test_flags = test_flags
         if period_ms <= 0:
@@ -79,6 +82,24 @@ class TaskManeuver:
                 #else:
                     #set the left and right target value shares for the motor task
                     #self.set_targets(0.0, 0.0, "idle")
+
+                self.request_distance = self.maneuver_request.value["distance"]
+                self.request_angle = self.maneuver_request.value["angle"]
+                self.request_speed = self.maneuver_request.value["speed"]
+
+                self.mode = self.maneuver_request.value["mode"]
+
+                #go into state based on mode
+                if self.mode == "line follow":
+                    self.state = self.S2_FOLLOW_LINE
+                elif self.mode == "lane change":
+                    self.state = self.S3_MERGE_LANE
+                elif self.mode == "stop":
+                    self.state = self.S4_STOP_MOTOR
+                elif self.mode == "blind drive":
+                    self.state = self.S5_BLIND_DRIVE
+                elif self.mode == "angle point":
+                    self.state = self.S6_POINT_AT_ANGLE
 
             elif self.state == self.S2_FOLLOW_LINE:
                 if not self.line_follow_flag.value:
@@ -146,7 +167,7 @@ class TaskManeuver:
                 self.state = self.S0_IDLE
 
             # Roll forward at set speed. Read encoders to keep orientation constant.
-            elif self.state == self.S5_BLIND_ROLL:
+            elif self.state == self.S5_BLIND_DRIVE:
                 pass
 
             # Control motors to do an on-the-spot rotation to point ROMI at a given angle. 
