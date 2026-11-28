@@ -422,6 +422,8 @@ def main():
         lane_change_flag=lane_change_flag,
         lane_change_dir=lane_chane_dir, 
         following_target=following_target,
+        maneuver_request = maneuver_request,
+        maneuver_status = maneuver_status,
         test_flags=test_flags, 
         period_ms=MANEUV_PERIOD_MS,
     )
