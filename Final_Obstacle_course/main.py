@@ -5,6 +5,7 @@ import gc
 from taskmotor import TaskMotor
 from taskmaneuver import TaskManeuver
 from taskuser import TaskUser
+from taskcourse import TaskCourse
 from tasksensor import TaskSensor
 from taskimu import TaskImu
 from tshare import Share
@@ -302,10 +303,13 @@ def main():
     sensor_flag = Share(False, bool)
     # empty dictionary {} of type dict-last captured sensor data i.e sensor_data["line"]
     sensor_data = Share({}, dict)
+    maneuver_request = Share({}, dict)
+    maneuver_status = Share({}, dict)
     #start or stop lane change
     lane_change_flag = Share (False, bool)
     lane_chane_dir = Share("left", str)
     following_target = Share(False, bool)
+
 
 
     #new sensor dictionary values for line stop
@@ -315,6 +319,17 @@ def main():
     sensor_data.value["white_background"] = False
     sensor_data.value["line_detected"] = False
     sensor_data.value["sensor_time_us"] = None
+
+    #TaskCousre sensds a command and TaskManeuver send progress back
+    maneuver_request.value["request_id"] = -1
+    maneuver_request.value["mode"] = None
+    maneuver_request.value["distance"] = None
+    maneuver_request.value["angle"] = None
+    maneuver_request.value["speed"] = None
+
+    maneuver_status.value["ID"] = -1
+    maneuver_status.value["status"] = None #running complete or failed
+
 
     left_mode = Share("idle", str)
     right_mode = Share("idle", str)
@@ -326,6 +341,13 @@ def main():
     right_position_cm = Share(0.0, float)
     test_flags = (left_test_flag, right_test_flag)
 
+    #shares for taskcourse
+    b1_press = Share(False, bool)
+    bump_status = Share(False, bool)
+    maneuver_request = Share("line follow", str)
+    maneuver_status = Share(False, bool)
+    course_status = Share("State", str) #for debugging just tells ui the state
+    stop_latch = Share(False, bool)
 
     #Create tasks
     left_motor = TaskMotor(
@@ -402,6 +424,19 @@ def main():
         following_target=following_target,
         test_flags=test_flags, 
         period_ms=MANEUV_PERIOD_MS,
+    )
+
+    task_course = TaskCourse(
+        start_event = b1_press,
+        bump_status = bump_status,
+        sensor_data = sensor_data,
+        left_position_cm = left_position_cm,
+        right_postion_cm = right_position_cm,
+        maneuver_request = maneuver_request,
+        maneuver_status = maneuver_status,
+        course_status = course_status,
+        stop_latch = stop_latch
+
     )
 
     task_user = TaskUser(
